@@ -2,100 +2,239 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Центр Управления Посадкой: Марс-1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Симулятор Посадки «Марс-2»</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: #f8fafc; padding: 20px; margin: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #f8fafc; padding: 15px; margin: 0; overflow: hidden; touch-action: manipulation; }
         .card { background: #1e293b; border-radius: 12px; padding: 20px; max-width: 400px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; }
-        h2 { color: #f97316; margin-top: 0; text-align: center; text-transform: uppercase; font-size: 20px; letter-spacing: 1px; }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; font-size: 14px; margin-bottom: 5px; color: #94a3b8; }
-        input, select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #fff; box-sizing: border-box; font-size: 16px; }
-        button { width: 100%; padding: 12px; background: #f97316; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; transition: 0.2s; }
-        button:hover { background: #ea580c; }
-        #result { margin-top: 20px; padding: 15px; background: #0f172a; border-radius: 8px; border-left: 4px solid #f97316; display: none; }
-        .spec-item { margin: 8px 0; font-size: 15px; display: flex; justify-content: space-between; }
+        h2 { color: #f97316; margin: 0 0 10px 0; text-align: center; text-transform: uppercase; font-size: 18px; }
+        
+        /* Экран параметров */
+        .input-group { margin-bottom: 12px; }
+        label { display: block; font-size: 13px; margin-bottom: 4px; color: #94a3b8; }
+        select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 15px; }
+        
+        /* Экран симулятора */
+        #game-screen { display: none; text-align: center; position: relative; }
+        #game-canvas { background: #000; border: 2px solid #334155; border-radius: 8px; width: 100%; height: 300px; }
+        #telemetry { position: absolute; top: 10px; left: 10px; text-align: left; font-family: monospace; font-size: 12px; color: #38bdf8; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 4px; pointer-events: none; }
+        
+        /* Кнопка управления */
+        #thrust-btn { width: 80px; height: 80px; background: #e11d48; color: white; border: none; border-radius: 50%; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 15px; box-shadow: 0 0 20px rgba(225, 29, 72, 0.5); -webkit-user-select: none; user-select: none; }
+        #thrust-btn:active { background: #be123c; transform: scale(0.95); }
+
+        /* Экран результата */
+        #result-screen { display: none; margin-top: 20px; padding: 15px; background: #0f172a; border-radius: 8px; text-align: center; }
+        .spec-item { display: flex; justify-content: space-between; font-size: 14px; margin: 6px 0; border-bottom: 1px solid #334155; padding-bottom: 4px; }
         .spec-value { font-weight: bold; color: #38bdf8; }
+        
+        .status-msg { font-size: 24px; font-weight: bold; margin-bottom: 15px; }
+        .success { color: #4ade80; }
+        .crash { color: #f87171; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>🚀 Расчет Посадки «Марс-1»</h2>
-    <p style="font-size: 13px; color: #94a3b8; text-align: center;">Введите параметры посадочного модуля для получения ТЗ на сборку</p>
-    
-    <div class="input-group">
-        <label>Вес научного груза (Маркера):</label>
-        <select id="weight">
-            <option value="light">Легкий (1 маркер / ~15г)</option>
-            <option value="heavy">Тяжелый (3 маркер / ~45г)</option>
-        </select>
-    </div>
-
-    <div class="input-group">
-        <label>Плотность атмосферы планеты:</label>
-        <select id="atmosphere">
-            <option value="thin">Разреженная (Марсианский тип)</option>
-            <option value="dense">Плотная (Венерианский тип)</option>
-        </select>
-    </div>
-
-    <div class="input-group">
-        <label>Желаемая скорость спуска:</label>
-        <input type="range" id="speed" min="1" max="5" value="3">
-        <div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b;">
-            <span>Медленно (Безопасно)</span>
-            <span>Быстро (Опасно)</span>
+    <!-- ЭКРАН 1: Настройка параметров -->
+    <div id="setup-screen">
+        <h2>🚀 Настройка Миссии</h2>
+        <div class="input-group">
+            <label>Вес посадочного модуля:</label>
+            <select id="config-weight">
+                <option value="light">Легкий (1 маркер)</option>
+                <option value="heavy">Тяжелый (3 маркера)</option>
+            </select>
         </div>
+        <div class="input-group">
+            <label>Целевая планета (Атмосфера):</label>
+            <select id="config-atmos">
+                <option value="thin">Марс (Разреженная)</option>
+                <option value="dense">Венера (Плотная)</option>
+            </select>
+        </div>
+        <button onclick="startSimulation()" style="width:100%; padding: 12px; background: #f97316; color:white; border:none; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer;">Начать посадку</button>
     </div>
 
-    <button onclick="calculate()">Рассчитать ТЗ на сборку</button>
+    <!-- ЭКРАН 2: Симулятор пилотирования -->
+    <div id="game-screen">
+        <h2>🎮 Пилотирование</h2>
+        <div id="telemetry">
+            Высота: <span id="tel-alt">1000</span> м<br>
+            Скорость: <span id="tel-vel">0</span> м/с<br>
+            Топливо: <span id="tel-fuel">100</span>%
+        </div>
+        <canvas id="game-canvas"></canvas>
+        <button id="thrust-btn">ТЯГА</button>
+        <p style="font-size:11px; color:#94a3b8; margin: 5px 0 0 0;">Держи скорость < 5 м/с у поверхности!</p>
+    </div>
 
-    <div id="result">
-        <h3 style="color: #38bdf8; margin-top:0; font-size: 16px;">📋 Инженерный Чертеж:</h3>
-        <div class="spec-item"><span>Минимальный диаметр купола:</span> <span class="spec-value" id="res-parachute">-</span></div>
-        <div class="spec-item"><span>Количество амортизаторов:</span> <span class="spec-value" id="res-dampers">-</span></div>
-        <div class="spec-item"><span>Лимит скотча на каркас:</span> <span class="spec-value" id="res-tape">-</span></div>
-        <div class="spec-item"><span>Разрешено бумажных листов:</span> <span class="spec-value" id="res-paper">-</span></div>
-        <div style="margin-top: 10px; padding: 8px; background: #1e293b; border-radius: 4px; font-size: 12px; color: #f59e0b; text-align: center;" id="res-warning"></div>
+    <!-- ЭКРАН 3: Результат миссии -->
+    <div id="result-screen">
+        <div id="status-icon" class="status-msg"></div>
+        <div id="status-desc" style="font-size:14px; margin-bottom:20px; color:#94a3b8;"></div>
+        
+        <div id="engineering-specs" style="display:none; text-align:left;">
+            <h3 style="color: #38bdf8; font-size: 16px; text-align:center;">📋 ТЗ на сборку (Physigital):</h3>
+            <div class="spec-item"><span>Парашют (купол):</span> <span class="spec-value" id="spec-parachute"></span></div>
+            <div class="spec-item"><span>Зоны амортизации:</span> <span class="spec-value" id="spec-dampers"></span></div>
+            <div class="spec-item"><span>Лимит скотча:</span> <span class="spec-value" id="spec-tape"></span></div>
+            <button onclick="location.reload()" style="width:100%; padding: 10px; background: #475569; color:white; border:none; border-radius:6px; font-weight:bold; margin-top:15px; cursor:pointer;">Новая миссия</button>
+        </div>
+        <button id="retry-btn" onclick="location.reload()" style="display:none; width:100%; padding: 12px; background: #e11d48; color:white; border:none; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer;">Попробовать снова</button>
     </div>
 </div>
 
 <script>
-function calculate() {
-    const weight = document.getElementById('weight').value;
-    const atmosphere = document.getElementById('atmosphere').value;
-    const speed = parseInt(document.getElementById('speed').value);
+    // Глобальные переменные симулятора
+    let canvas, ctx, gameLoop;
+    let isThrusting = false;
+    let missionParams = {};
 
-    let parachute = "20 см";
-    let dampers = "2 зоны (стаканчики)";
-    let tape = "50 см";
-    let paper = "2 листа";
-    let warning = "Стандартный расчет. Фиксируйте груз жестко!";
+    // Физика (зависит от настроек)
+    let state = {
+        altitude: 1000,
+        velocity: 0,
+        fuel: 100,
+        gravity: 0.15, // Стандарт (Марс)
+        enginePower: 0.4,
+        fuelCons: 0.8,
+        safeVelocity: 5,
+        massMultiplier: 1
+    };
 
-    if (atmosphere === 'thin') {
-        parachute = speed < 3 ? "35–40 см (Большой купол)" : "25 см";
-        warning = "⚠️ Разреженная атмосфера: требуется увеличенная площадь парашюта!";
-    } else {
-        parachute = "15–20 см (Малый купол)";
-        warning = "⚠️ Плотная атмосфера: упор на стойкость к боковому дрейфу.";
+    function startSimulation() {
+        // 1. Считываем настройки
+        const weight = document.getElementById('config-weight').value;
+        const atmos = document.getElementById('config-atmos').value;
+
+        // 2. Настраиваем физику
+        state.gravity = (atmos === 'thin') ? 0.15 : 0.08; // На Венере плотная атмосфера тормозит, гравитация "ниже"
+        state.massMultiplier = (weight === 'heavy') ? 1.5 : 1;
+        state.fuelCons = (weight === 'heavy') ? 1.2 : 0.8;
+        missionParams = { weight, atmos };
+
+        // 3. Переключаем экраны
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'block';
+
+        // 4. Инициализация Canvas
+        canvas = document.getElementById('game-canvas');
+        ctx = canvas.getContext('2d');
+        // Подстройка под размер экрана
+        canvas.width = canvas.parentElement.offsetWidth - 4;
+        canvas.height = 300;
+
+        // 5. Управление (Тач/Мышь)
+        const btn = document.getElementById('thrust-btn');
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); isThrusting = true; });
+        btn.addEventListener('touchend', () => isThrusting = false);
+        btn.addEventListener('mousedown', () => isThrusting = true);
+        btn.addEventListener('mouseup', () => isThrusting = false);
+
+        // 6. Запуск цикла
+        gameLoop = setInterval(update, 1000/30); // 30 FPS
     }
 
-    if (weight === 'heavy') {
-        dampers = "4 зоны (многоуровневые ноги)";
-        paper = "3 листа";
-        tape = "80 см";
-        warning += " Груз тяжелый — делайте двойное дно!";
+    function update() {
+        // Физические расчеты
+        let acceleration = state.gravity * state.massMultiplier;
+
+        if (isThrusting && state.fuel > 0) {
+            acceleration -= state.enginePower;
+            state.fuel -= state.fuelCons;
+        }
+
+        state.velocity += acceleration;
+        state.altitude -= state.velocity * 0.1; // Масштабирование высоты для экрана
+
+        // Обновление телеметрии
+        document.getElementById('tel-alt').innerText = Math.max(0, Math.round(state.altitude));
+        document.getElementById('tel-vel').innerText = state.velocity.toFixed(1);
+        document.getElementById('tel-fuel').innerText = Math.max(0, Math.round(state.fuel));
+
+        // Отрисовка
+        drawGame();
+
+        // Проверка условий окончания
+        if (state.altitude <= 15) { // Поверхность
+            clearInterval(gameLoop);
+            endMission();
+        }
     }
 
-    document.getElementById('res-parachute').innerText = parachute;
-    document.getElementById('res-dampers').innerText = dampers;
-    document.getElementById('res-tape').innerText = tape;
-    document.getElementById('res-paper').innerText = paper;
-    document.getElementById('res-warning').innerText = warning;
+    function drawGame() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    document.getElementById('result').style.display = 'block';
-}
+        const w = canvas.width;
+        const h = canvas.height;
+        
+        // Поверхность
+        ctx.fillStyle = (missionParams.atmos === 'thin') ? '#a16207' : '#ca8a04';
+        ctx.fillRect(0, h - 20, w, 20);
+
+        // Посадочный модуль (простой квадрат с "ногами")
+        const landerY = h - 20 - (state.altitude * (h-60)/1000) - 20;
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(w/2 - 15, landerY, 30, 20); // Тело
+        
+        ctx.strokeStyle = '#f8fafc'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(w/2-15, landerY+20); ctx.lineTo(w/2-25, landerY+30); ctx.stroke(); // Нога Л
+        ctx.beginPath(); ctx.moveTo(w/2+15, landerY+20); ctx.lineTo(w/2+25, landerY+30); ctx.stroke(); // Нога П
+
+        // Пламя двигателя
+        if (isThrusting && state.fuel > 0) {
+            ctx.fillStyle = '#f97316'; ctx.beginPath(); ctx.moveTo(w/2-10, landerY+20); ctx.lineTo(w/2+10, landerY+20); ctx.lineTo(w/2, landerY+40); ctx.fill();
+            ctx.fillStyle = '#fb923c'; ctx.beginPath(); ctx.moveTo(w/2-5, landerY+20); ctx.lineTo(w/2+5, landerY+20); ctx.lineTo(w/2, landerY+35); ctx.fill();
+        }
+    }
+
+    function endMission() {
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+
+        const statusIcon = document.getElementById('status-icon');
+        const statusDesc = document.getElementById('status-desc');
+        const finalVel = state.velocity;
+
+        if (finalVel <= state.safeVelocity) {
+            // ПОБЕДА (Мягкая посадка)
+            statusIcon.innerText = "🎉 ПОСАДКА УСПЕШНА!";
+            statusIcon.className = "status-msg success";
+            statusDesc.innerText = `Скорость касания: ${finalVel.toFixed(1)} м/с (Безопасно). Вы переходите к инженерному этапу.`;
+            
+            generateEngineeringSpecs();
+            document.getElementById('engineering-specs').style.display = 'block';
+        } else {
+            // ПРОИГРЫШ (Катастрофа)
+            statusIcon.innerText = "💥 КАТАСТРОФА!";
+            statusIcon.className = "status-msg crash";
+            statusDesc.innerText = `Скорость касания: ${finalVel.toFixed(1)} м/с (Слишком быстро, лимит 5.0 м/с). Модуль уничтожен.`;
+            document.getElementById('retry-btn').style.display = 'block';
+        }
+    }
+
+    function generateEngineeringSpecs() {
+        let parachute, dampers, tape;
+
+        if (missionParams.atmos === 'thin') {
+            parachute = "40 см (Большой, т.к. разреженная атмосфера)";
+        } else {
+            parachute = "20 см (Малый, т.к. плотная атмосфера)";
+        }
+
+        if (missionParams.weight === 'heavy') {
+            dampers = "4 зоны (Многоуровневые 'ноги' из стаканчиков)";
+            tape = "100 см (Усиленный каркас)";
+        } else {
+            dampers = "2 зоны (Простые опоры)";
+            tape = "60 см";
+        }
+
+        document.getElementById('spec-parachute').innerText = parachute;
+        document.getElementById('spec-dampers').innerText = dampers;
+        document.getElementById('spec-tape').innerText = tape;
+    }
 </script>
 
 </body>
