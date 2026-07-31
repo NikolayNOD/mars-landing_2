@@ -3,33 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Посадка Марсохода</title>
+    <title>Посадка на Марс</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; padding: 15px; margin: 0; user-select: none; }
         .card { background: #1e293b; border-radius: 16px; padding: 20px; max-width: 380px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; }
-        h2 { color: #f97316; margin: 0 0 15px 0; text-align: center; text-transform: uppercase; font-size: 18px; }
+        h2 { color: #f97316; margin: 0 0 10px 0; text-align: center; text-transform: uppercase; font-size: 18px; }
         
-        .param-group { margin-bottom: 12px; background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155; }
-        label { display: flex; justify-content: space-between; font-size: 13px; color: #94a3b8; margin-bottom: 5px; }
+        .param-group { margin-bottom: 10px; background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155; }
+        label { display: flex; justify-content: space-between; font-size: 13px; color: #94a3b8; margin-bottom: 4px; }
         .val { color: #38bdf8; font-weight: bold; }
         input[type=range] { width: 100%; accent-color: #f97316; }
 
         #sim-screen { display: none; text-align: center; }
-        #canvas-container { position: relative; width: 100%; height: 260px; background: #020617; border-radius: 12px; overflow: hidden; border: 1px solid #334155; }
+        #canvas-container { position: relative; width: 100%; height: 280px; background: #020617; border-radius: 12px; overflow: hidden; border: 1px solid #334155; }
         canvas { width: 100%; height: 100%; }
         
-        .dash { position: absolute; top: 10px; left: 10px; text-align: left; font-family: monospace; font-size: 12px; color: #38bdf8; background: rgba(15, 23, 42, 0.85); padding: 8px; border-radius: 6px; }
+        .dash { position: absolute; top: 10px; left: 10px; text-align: left; font-family: monospace; font-size: 11px; color: #38bdf8; background: rgba(15, 23, 42, 0.9); padding: 6px 10px; border-radius: 6px; border: 1px solid #334155; line-height: 1.4; }
+        .hint-box { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: bold; background: rgba(15, 23, 42, 0.95); padding: 5px 10px; border-radius: 20px; border: 1px solid #f97316; white-space: nowrap; }
 
-        /* Кнопка вкл/выкл двигателя */
-        #engine-btn { width: 100%; padding: 16px; background: #22c55e; color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 18px; margin-top: 15px; cursor: pointer; }
+        /* Кнопка двигателя */
+        #engine-btn { width: 100%; padding: 16px; background: #22c55e; color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 18px; margin-top: 12px; cursor: pointer; transition: 0.1s; }
         #engine-btn.active { background: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); }
 
         #result-screen { display: none; text-align: center; }
-        .res-title { font-size: 22px; font-weight: bold; margin-bottom: 10px; }
+        .res-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; }
         .success { color: #22c55e; }
         .crash { color: #ef4444; }
         
-        .btn-action { width: 100%; padding: 12px; background: #f97316; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 15px; cursor: pointer; }
+        .btn-action { width: 100%; padding: 12px; background: #f97316; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 12px; cursor: pointer; }
         .spec-box { background: #0f172a; padding: 12px; border-radius: 8px; text-align: left; font-size: 13px; margin-top: 10px; border-left: 3px solid #38bdf8; }
     </style>
 </head>
@@ -38,10 +39,11 @@
 <div class="card">
     <!-- 1. Настройка параметров -->
     <div id="setup-screen">
-        <h2>🛠️ Параметры Аппарата</h2>
+        <h2>🔴 Миссия «Марс-1»</h2>
+        <p style="font-size:11px; color:#94a3b8; text-align:center; margin-top:-8px;">Задай параметры аппарата перед запуском</p>
         
         <div class="param-group">
-            <label>Масса аппарата: <span class="val" id="mass-val">50 кг</span></label>
+            <label>Масса марсохода: <span class="val" id="mass-val">50 кг</span></label>
             <input type="range" id="mass" min="20" max="100" value="50" oninput="document.getElementById('mass-val').innerText = this.value + ' кг'">
         </div>
 
@@ -51,22 +53,26 @@
         </div>
 
         <div class="param-group">
-            <label>Начальная скорость падения: <span class="val" id="speed-val">20 м/с</span></label>
-            <input type="range" id="speed" min="10" max="50" value="20" oninput="document.getElementById('speed-val').innerText = this.value + ' м/с'">
+            <label>Входная скорость: <span class="val" id="speed-val">30 м/с</span></label>
+            <input type="range" id="speed" min="15" max="60" value="30" oninput="document.getElementById('speed-val').innerText = this.value + ' м/с'">
         </div>
 
-        <button class="btn-action" onclick="startFlight()">🚀 Начать посадку</button>
+        <button class="btn-action" onclick="startFlight()">🚀 Начать симуляцию</button>
     </div>
 
     <!-- 2. Симулятор падения -->
     <div id="sim-screen">
-        <h2>🛰️ Посадка в процессе</h2>
+        <h2>🛰️ Посадка на Марс</h2>
         <div id="canvas-container">
             <div class="dash">
-                Высота: <span id="d-alt">500</span> м<br>
+                Высота: <span id="d-alt">1000</span> м<br>
                 Скорость: <span id="d-vel">0</span> м/с<br>
+                Топливо: <span id="d-fuel" style="color:#22c55e">100</span>%<br>
                 Двигатель: <span id="d-eng" style="color:#ef4444">ВЫКЛ</span>
             </div>
+            
+            <div id="hint" class="hint-box" style="color:#f59e0b;">💡 Гаси скорость до 4.0 м/с!</div>
+            
             <canvas id="canvas"></canvas>
         </div>
         
@@ -76,50 +82,77 @@
     <!-- 3. Итог -->
     <div id="result-screen">
         <div id="res-status" class="res-title"></div>
-        <div id="res-desc" style="font-size: 14px; color: #94a3b8;"></div>
+        <div id="res-desc" style="font-size: 13px; color: #94a3b8;"></div>
         
         <div id="tz-box" class="spec-box" style="display:none;">
-            <b style="color:#38bdf8;">📋 ТЗ на сборку мода:</b><br>
-            • Собрать парашют диаметром: <b id="tz-chute"></b><br>
-            • Сделать амортизаторов: <b id="tz-dampers"></b><br>
-            • Утяжелить модуль маркерами: <b id="tz-mass"></b>
+            <b style="color:#38bdf8;">📋 ТЗ на физический модуль:</b><br>
+            • Диаметр купола парашюта: <b id="tz-chute"></b><br>
+            • Амортизирующие опоры: <b id="tz-dampers"></b><br>
+            • Нагрузка (маркеры): <b id="tz-mass"></b>
         </div>
 
-        <button class="btn-action" onclick="location.reload()">Попробовать снова</button>
+        <button class="btn-action" onclick="location.reload()">🔄 Новая попытка</button>
     </div>
 </div>
 
 <script>
     let mass, chute, initSpeed;
-    let alt = 500, vel = 0, engineOn = false;
-    let loop;
+    let alt = 1000, vel = 0, fuel = 100, engineOn = false;
+    let loop, particles = [];
+
+    // Звуковой движок (Web Audio API - работает без внешних файлов)
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playBeep(freq, type, duration) {
+        try {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.value = freq;
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+            osc.stop(audioCtx.currentTime + duration);
+        } catch(e) {}
+    }
 
     function startFlight() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        
         mass = parseInt(document.getElementById('mass').value);
         chute = parseInt(document.getElementById('chute').value);
         initSpeed = parseInt(document.getElementById('speed').value);
         vel = initSpeed;
+        alt = 1000;
+        fuel = 100;
 
         document.getElementById('setup-screen').style.display = 'none';
         document.getElementById('sim-screen').style.display = 'block';
 
         const canvas = document.getElementById('canvas');
         canvas.width = canvas.parentElement.offsetWidth;
-        canvas.height = 260;
+        canvas.height = 280;
 
         loop = setInterval(updatePhysics, 1000/30);
     }
 
     function toggleEngine() {
+        if (fuel <= 0 && !engineOn) return;
+
         engineOn = !engineOn;
         const btn = document.getElementById('engine-btn');
         const dashEng = document.getElementById('d-eng');
+
+        // Легкая вибрация телефона при клике
+        if (navigator.vibrate) navigator.vibrate(50);
 
         if (engineOn) {
             btn.innerText = "🛑 ВЫКЛЮЧИТЬ ДВИГАТЕЛЬ";
             btn.className = "active";
             dashEng.innerText = "ВКЛ";
             dashEng.style.color = "#22c55e";
+            playBeep(120, 'sawtooth', 0.1);
         } else {
             btn.innerText = "🔥 ВКЛЮЧИТЬ ДВИГАТЕЛЬ";
             btn.className = "";
@@ -129,32 +162,64 @@
     }
 
     function updatePhysics() {
-        // Сопротивление воздуха парашюта (чем больше парашют, тем сильнее тормозит)
-        let drag = (chute * 0.005) / (mass * 0.02);
-        // Гравитация
-        let gravity = 0.3 + (mass * 0.005);
-        // Тяга двигателя
-        let thrust = engineOn ? 1.2 : 0;
+        // Расход топлива
+        if (engineOn && fuel > 0) {
+            fuel -= 0.6;
+            if (navigator.vibrate && Math.random() > 0.5) navigator.vibrate(20);
+            if (fuel <= 0) {
+                fuel = 0;
+                if (engineOn) toggleEngine(); // Автоотключение если сожгли всё топливо
+            }
+        }
 
-        // Итоговое ускорение
-        let accel = gravity - drag - thrust;
+        // Физика
+        let drag = (chute * 0.001) / (mass * 0.015); 
+        let marsGravity = 0.25 + (mass * 0.003); 
+        let engineThrust = (engineOn && fuel > 0) ? 0.75 : 0; 
+
+        let accel = marsGravity - drag - engineThrust;
         vel += accel;
 
-        // Ограничение минимальной скорости падения
-        if (vel < -5) vel = -5; // не даем лететь в космос вверх
+        alt -= vel * 0.4;
 
-        alt -= vel * 0.3;
-
-        // Дашборд
+        // Телеметрия
         document.getElementById('d-alt').innerText = Math.max(0, Math.round(alt));
         document.getElementById('d-vel').innerText = vel.toFixed(1);
+        
+        const fElem = document.getElementById('d-fuel');
+        fElem.innerText = Math.round(fuel);
+        fElem.style.color = fuel < 25 ? "#ef4444" : "#22c55e";
+
+        // Подсказки
+        const hint = document.getElementById('hint');
+        if (fuel <= 0 && alt > 50) {
+            hint.innerText = "⚓ ТОПЛИВО КОНЧИЛОСЬ! Надейся на парашют!";
+            hint.style.color = "#ef4444";
+        } else if (vel > 12.0) {
+            hint.innerText = "⚠️ Падаешь слишком быстро! Врубай тягу!";
+            hint.style.color = "#ef4444";
+        } else if (vel < 0) {
+            hint.innerText = "🚀 Взлетаем вверх! Выключи двигатель!";
+            hint.style.color = "#38bdf8";
+        } else if (vel <= 4.0) {
+            hint.innerText = "✅ Отличная скорость! Держи баланс!";
+            hint.style.color = "#22c55e";
+        } else {
+            hint.innerText = "💡 Гаси скорость ближе к земле (лимит 4.0 м/с)";
+            hint.style.color = "#f59e0b";
+        }
 
         draw();
 
-        // Касание земли
+        // Проверки
+        if (alt >= 2000) {
+            clearInterval(loop);
+            showResult("space");
+        }
+
         if (alt <= 0) {
             clearInterval(loop);
-            showResult();
+            showResult(vel <= 4.0 ? "success" : "crash");
         }
     }
 
@@ -167,42 +232,66 @@
         ctx.clearRect(0, 0, w, h);
 
         // Поверхность Марса
-        ctx.fillStyle = '#b45309';
-        ctx.fillRect(0, h - 20, w, 20);
+        ctx.fillStyle = '#9a3412';
+        ctx.fillRect(0, h - 25, w, 25);
 
-        // Позиция ровера
-        let y = h - 20 - (alt * (h - 80) / 500) - 20;
+        let y = h - 25 - (alt * (h - 90) / 1000) - 20;
+        if (y < 20) y = 20;
+
+        // Пыль от двигателя у земли
+        if (engineOn && alt < 150) {
+            particles.push({
+                x: w/2 + (Math.random()*30 - 15),
+                y: h - 25,
+                r: Math.random()*8 + 2,
+                alpha: 1
+            });
+        }
+
+        // Отрисовка частиц пыли
+        for(let i = 0; i < particles.length; i++) {
+            let p = particles[i];
+            ctx.fillStyle = `rgba(180, 83, 9, ${p.alpha})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+            ctx.fill();
+            p.y -= 0.5;
+            p.alpha -= 0.05;
+        }
+        particles = particles.filter(p => p.alpha > 0);
 
         // Парашют
         if (chute > 0) {
             ctx.fillStyle = '#f97316';
             ctx.beginPath();
-            ctx.arc(w/2, y - 20, chute/2, Math.PI, 0);
+            ctx.arc(w/2, y - 22, chute/2.5, Math.PI, 0);
             ctx.fill();
-            // Стропы
-            ctx.strokeStyle = '#64748b';
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(w/2 - chute/2, y - 20); ctx.lineTo(w/2, y);
-            ctx.moveTo(w/2 + chute/2, y - 20); ctx.lineTo(w/2, y);
+            ctx.moveTo(w/2 - chute/2.5, y - 22); ctx.lineTo(w/2, y);
+            ctx.moveTo(w/2 + chute/2.5, y - 22); ctx.lineTo(w/2, y);
             ctx.stroke();
         }
 
         // Аппарат
         ctx.fillStyle = '#e2e8f0';
-        ctx.fillRect(w/2 - 12, y, 24, 16);
+        ctx.fillRect(w/2 - 14, y, 28, 18);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(w/2 - 6, y + 3, 12, 6);
 
-        // Пламя двигателя
-        if (engineOn) {
+        // Пламя
+        if (engineOn && fuel > 0) {
             ctx.fillStyle = '#ef4444';
             ctx.beginPath();
-            ctx.moveTo(w/2 - 8, y + 16);
-            ctx.lineTo(w/2 + 8, y + 16);
-            ctx.lineTo(w/2, y + 32);
+            ctx.moveTo(w/2 - 10, y + 18);
+            ctx.lineTo(w/2 + 10, y + 18);
+            ctx.lineTo(w/2, y + 36);
             ctx.fill();
         }
     }
 
-    function showResult() {
+    function showResult(type) {
         document.getElementById('sim-screen').style.display = 'none';
         document.getElementById('result-screen').style.display = 'block';
 
@@ -210,20 +299,30 @@
         const desc = document.getElementById('res-desc');
         const tzBox = document.getElementById('tz-box');
 
-        if (vel <= 4.0) {
+        if (type === "success") {
+            playBeep(600, 'sine', 0.3);
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            
             status.innerText = "🎉 МЯГКАЯ ПОСАДКА!";
             status.className = "res-title success";
-            desc.innerText = `Скорость касания: ${vel.toFixed(1)} м/с. Отличная работа пилота!`;
+            desc.innerText = `Скорость касания: ${vel.toFixed(1)} м/с. Идеально! Марсоход цел, забирай ТЗ на сборку.`;
             
-            // Заполнение ТЗ
             document.getElementById('tz-chute').innerText = chute + " см";
-            document.getElementById('tz-dampers').innerText = mass > 60 ? "4 зоны" : "2 зоны";
-            document.getElementById('tz-mass').innerText = mass > 60 ? "3 маркера" : "1 маркер";
+            document.getElementById('tz-dampers').innerText = mass > 60 ? "4 зоны (усиленные)" : "2 зоны";
+            document.getElementById('tz-mass').innerText = mass > 60 ? "3 маркера (~45г)" : "1 маркер (~15г)";
             tzBox.style.display = "block";
-        } else {
-            status.innerText = "💥 КРАШ-ТЕСТ НЕ ПРОЙДЕН!";
+        } else if (type === "space") {
+            playBeep(150, 'sawtooth', 0.4);
+            status.innerText = "🚀 УЛЕТЕЛ В КОСМОС!";
             status.className = "res-title crash";
-            desc.innerText = `Скорость касания: ${vel.toFixed(1)} м/с (Лимит — 4.0 м/с). Модуль разбился! Измени параметры или вовремя включай двигатель.`;
+            desc.innerText = "Вы превысили высоту 2000 м и улетели с Марса. Не передерживай двигатель!";
+        } else {
+            playBeep(80, 'square', 0.5);
+            if (navigator.vibrate) navigator.vibrate(400);
+            
+            status.innerText = "💥 ВЗРЫВ ПРИ ПОСАДКЕ!";
+            status.className = "res-title crash";
+            desc.innerText = `Скорость касания: ${vel.toFixed(1)} м/с (Лимит — 4.0 м/с). Модуль разбился! Попробуй скорректировать массу или диаметр парашюта.`;
         }
     }
 </script>
