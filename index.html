@@ -3,104 +3,266 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Посадка на Марс</title>
+    <title>Миссия Каллисто</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; padding: 15px; margin: 0; user-select: none; }
-        .card { background: #1e293b; border-radius: 16px; padding: 20px; max-width: 380px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; }
-        h2 { color: #f97316; margin: 0 0 10px 0; text-align: center; text-transform: uppercase; font-size: 18px; }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif; 
+            background: #030712; 
+            color: #f3f4f6; 
+            padding: 15px; 
+            margin: 0; 
+            user-select: none;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(168, 85, 247, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.15) 0%, transparent 40%);
+        }
+
+        .card { 
+            background: rgba(17, 24, 39, 0.85); 
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 24px; 
+            padding: 22px; 
+            width: 100%;
+            max-width: 390px; 
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.1); 
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            position: relative;
+            overflow: hidden;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .lives-box {
+            font-size: 18px;
+            letter-spacing: 2px;
+        }
+
+        h2 { 
+            color: #f3f4f6; 
+            margin: 0; 
+            font-size: 20px; 
+            font-weight: 800;
+            background: linear-gradient(135deg, #38bdf8, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 11px;
+            color: #9ca3af;
+            text-align: center;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .param-group { 
+            margin-bottom: 12px; 
+            background: rgba(31, 41, 55, 0.5); 
+            padding: 12px 14px; 
+            border-radius: 12px; 
+            border: 1px solid rgba(255, 255, 255, 0.05); 
+        }
+        label { display: flex; justify-content: space-between; font-size: 13px; color: #9ca3af; margin-bottom: 6px; }
+        .val { color: #38bdf8; font-weight: 700; font-family: monospace; }
         
-        .param-group { margin-bottom: 10px; background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155; }
-        label { display: flex; justify-content: space-between; font-size: 13px; color: #94a3b8; margin-bottom: 4px; }
-        .val { color: #38bdf8; font-weight: bold; }
-        input[type=range] { width: 100%; accent-color: #f97316; }
+        input[type=range] { 
+            width: 100%; 
+            accent-color: #a855f7; 
+            height: 6px;
+            border-radius: 3px;
+            background: #374151;
+        }
 
         #sim-screen { display: none; text-align: center; }
-        #canvas-container { position: relative; width: 100%; height: 280px; background: #020617; border-radius: 12px; overflow: hidden; border: 1px solid #334155; }
+        
+        #canvas-container { 
+            position: relative; 
+            width: 100%; 
+            height: 290px; 
+            background: #030712; 
+            border-radius: 16px; 
+            overflow: hidden; 
+            border: 1px solid rgba(56, 189, 248, 0.2); 
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
+        }
         canvas { width: 100%; height: 100%; }
         
-        .dash { position: absolute; top: 10px; left: 10px; text-align: left; font-family: monospace; font-size: 11px; color: #38bdf8; background: rgba(15, 23, 42, 0.9); padding: 6px 10px; border-radius: 6px; border: 1px solid #334155; line-height: 1.4; }
-        .hint-box { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: bold; background: rgba(15, 23, 42, 0.95); padding: 5px 10px; border-radius: 20px; border: 1px solid #f97316; white-space: nowrap; }
+        .dash { 
+            position: absolute; 
+            top: 12px; 
+            left: 12px; 
+            text-align: left; 
+            font-family: 'SF Mono', ui-monospace, monospace; 
+            font-size: 11px; 
+            color: #e5e7eb; 
+            background: rgba(3, 7, 18, 0.85); 
+            backdrop-filter: blur(8px);
+            padding: 8px 12px; 
+            border-radius: 10px; 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            line-height: 1.5; 
+        }
 
-        /* Кнопка двигателя */
-        #engine-btn { width: 100%; padding: 16px; background: #22c55e; color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 18px; margin-top: 12px; cursor: pointer; transition: 0.1s; }
-        #engine-btn.active { background: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); }
+        .hint-box { 
+            position: absolute; 
+            bottom: 12px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            font-size: 11px; 
+            font-weight: 600; 
+            background: rgba(17, 24, 39, 0.95); 
+            backdrop-filter: blur(8px);
+            padding: 6px 14px; 
+            border-radius: 20px; 
+            border: 1px solid rgba(168, 85, 247, 0.4); 
+            white-space: nowrap; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        #engine-btn { 
+            width: 100%; 
+            padding: 16px; 
+            background: linear-gradient(135deg, #10b981, #059669); 
+            color: white; 
+            border: none; 
+            border-radius: 14px; 
+            font-weight: 800; 
+            font-size: 16px; 
+            margin-top: 14px; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        }
+        #engine-btn.active { 
+            background: linear-gradient(135deg, #ef4444, #dc2626); 
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.6); 
+        }
 
         #result-screen { display: none; text-align: center; }
-        .res-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; }
-        .success { color: #22c55e; }
-        .crash { color: #ef4444; }
+        .res-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+        .success { color: #34d399; text-shadow: 0 0 15px rgba(52, 211, 153, 0.4); }
+        .crash { color: #f87171; text-shadow: 0 0 15px rgba(248, 113, 113, 0.4); }
         
-        .btn-action { width: 100%; padding: 12px; background: #f97316; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 12px; cursor: pointer; }
-        .spec-box { background: #0f172a; padding: 12px; border-radius: 8px; text-align: left; font-size: 13px; margin-top: 10px; border-left: 3px solid #38bdf8; }
+        .btn-action { 
+            width: 100%; 
+            padding: 14px; 
+            background: linear-gradient(135deg, #06b6d4, #3b82f6); 
+            color: white; 
+            border: none; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            font-size: 15px; 
+            margin-top: 14px; 
+            cursor: pointer; 
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+        }
+
+        .spec-box { 
+            background: rgba(15, 23, 42, 0.8); 
+            padding: 14px; 
+            border-radius: 12px; 
+            text-align: left; 
+            font-size: 12px; 
+            margin-top: 12px; 
+            border-left: 4px solid #38bdf8; 
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            line-height: 1.6;
+        }
+
+        .warning-tag {
+            font-size: 10px;
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
     </style>
 </head>
 <body>
 
 <div class="card">
+    <!-- Шапка с жизнями -->
+    <div class="top-bar">
+        <h2>🪐 Посадка на Каллисто</h2>
+        <div class="lives-box" id="lives-display">❤️❤️❤️</div>
+    </div>
+
     <!-- 1. Настройка параметров -->
     <div id="setup-screen">
-        <h2>🔴 Миссия «Марс-1»</h2>
-        <p style="font-size:11px; color:#94a3b8; text-align:center; margin-top:-8px;">Задай параметры аппарата перед запуском</p>
+        <div class="subtitle">Установи параметры модуля</div>
         
         <div class="param-group">
-            <label>Масса марсохода: <span class="val" id="mass-val">50 кг</span></label>
+            <label>Масса аппарата: <span class="val" id="mass-val">50 кг</span></label>
             <input type="range" id="mass" min="20" max="100" value="50" oninput="document.getElementById('mass-val').innerText = this.value + ' кг'">
         </div>
 
         <div class="param-group">
-            <label>Диаметр парашюта: <span class="val" id="chute-val">30 см</span></label>
+            <label>Диаметр купола: <span class="val" id="chute-val">30 см</span></label>
             <input type="range" id="chute" min="10" max="60" value="30" oninput="document.getElementById('chute-val').innerText = this.value + ' см'">
+            <div style="margin-top: 4px;"><span class="warning-tag">⚠️ На Каллисто парашют не тормозит</span></div>
         </div>
 
         <div class="param-group">
-            <label>Входная скорость: <span class="val" id="speed-val">30 м/с</span></label>
-            <input type="range" id="speed" min="15" max="60" value="30" oninput="document.getElementById('speed-val').innerText = this.value + ' м/с'">
+            <label>Начальная скорость: <span class="val" id="speed-val">20 м/с</span></label>
+            <input type="range" id="speed" min="10" max="40" value="20" oninput="document.getElementById('speed-val').innerText = this.value + ' м/с'">
         </div>
 
-        <button class="btn-action" onclick="startFlight()">🚀 Начать симуляцию</button>
+        <button class="btn-action" onclick="startFlight()">🚀 НАЧАТЬ СПУСК</button>
     </div>
 
     <!-- 2. Симулятор падения -->
     <div id="sim-screen">
-        <h2>🛰️ Посадка на Марс</h2>
         <div id="canvas-container">
             <div class="dash">
-                Высота: <span id="d-alt">1000</span> м<br>
-                Скорость: <span id="d-vel">0</span> м/с<br>
-                Топливо: <span id="d-fuel" style="color:#22c55e">100</span>%<br>
-                Двигатель: <span id="d-eng" style="color:#ef4444">ВЫКЛ</span>
+                Высота: <span id="d-alt" style="color:#38bdf8">1000</span> м<br>
+                Скорость: <span id="d-vel" style="color:#a855f7">0</span> м/с<br>
+                Топливо: <span id="d-fuel" style="color:#34d399">100</span>%<br>
+                Двигатель: <span id="d-eng" style="color:#f87171">ВЫКЛ</span>
             </div>
             
-            <div id="hint" class="hint-box" style="color:#f59e0b;">💡 Гаси скорость до 4.0 м/с!</div>
+            <div id="hint" class="hint-box" style="color:#34d399;">🤖 Автопилот поможет у самой земли!</div>
             
             <canvas id="canvas"></canvas>
         </div>
         
-        <button id="engine-btn" onclick="toggleEngine()">🔥 ВКЛЮЧИТЬ ДВИГАТЕЛЬ</button>
+        <button id="engine-btn" onclick="toggleEngine()">🔥 ВКЛЮЧИТЬ ТЯГУ</button>
     </div>
 
     <!-- 3. Итог -->
     <div id="result-screen">
         <div id="res-status" class="res-title"></div>
-        <div id="res-desc" style="font-size: 13px; color: #94a3b8;"></div>
+        <div id="res-desc" style="font-size: 13px; color: #9ca3af; margin-bottom: 10px;"></div>
         
         <div id="tz-box" class="spec-box" style="display:none;">
-            <b style="color:#38bdf8;">📋 ТЗ на физический модуль:</b><br>
-            • Диаметр купола парашюта: <b id="tz-chute"></b><br>
-            • Амортизирующие опоры: <b id="tz-dampers"></b><br>
-            • Нагрузка (маркеры): <b id="tz-mass"></b>
+            <b style="color:#38bdf8;">📋 ТЗ на физическую модель:</b><br>
+            • Амортизирующие стойки: <b id="tz-dampers" style="color:#f43f5e;"></b><br>
+            • Полезный груз (маркеры): <b id="tz-mass" style="color:#a855f7;"></b><br>
+            • Конструкция купола: <b id="tz-chute" style="color:#34d399;"></b>
         </div>
 
-        <button class="btn-action" onclick="location.reload()">🔄 Новая попытка</button>
+        <button id="res-btn" class="btn-action" onclick="nextAttempt()">🔄 СЛЕДУЮЩАЯ ПОПЫТКА</button>
     </div>
 </div>
 
 <script>
+    let lives = 3;
     let mass, chute, initSpeed;
     let alt = 1000, vel = 0, fuel = 100, engineOn = false;
-    let loop, particles = [];
+    let loop, particles = [], stars = [];
 
-    // Звуковой движок (Web Audio API - работает без внешних файлов)
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
     function playBeep(freq, type, duration) {
@@ -117,6 +279,21 @@
         } catch(e) {}
     }
 
+    function updateLivesUI() {
+        let h = "";
+        for (let i = 0; i < 3; i++) {
+            h += i < lives ? "❤️" : "🖤";
+        }
+        document.getElementById('lives-display').innerText = h;
+    }
+
+    function initStars(w, h) {
+        stars = [];
+        for(let i = 0; i < 40; i++) {
+            stars.push({ x: Math.random() * w, y: Math.random() * h, r: Math.random() * 1.5, alpha: Math.random() });
+        }
+    }
+
     function startFlight() {
         if (audioCtx.state === 'suspended') audioCtx.resume();
         
@@ -126,14 +303,16 @@
         vel = initSpeed;
         alt = 1000;
         fuel = 100;
+        engineOn = false;
 
         document.getElementById('setup-screen').style.display = 'none';
         document.getElementById('sim-screen').style.display = 'block';
 
         const canvas = document.getElementById('canvas');
         canvas.width = canvas.parentElement.offsetWidth;
-        canvas.height = 280;
+        canvas.height = 290;
 
+        initStars(canvas.width, canvas.height);
         loop = setInterval(updatePhysics, 1000/30);
     }
 
@@ -144,43 +323,49 @@
         const btn = document.getElementById('engine-btn');
         const dashEng = document.getElementById('d-eng');
 
-        // Легкая вибрация телефона при клике
-        if (navigator.vibrate) navigator.vibrate(50);
+        if (navigator.vibrate) navigator.vibrate(30);
 
         if (engineOn) {
-            btn.innerText = "🛑 ВЫКЛЮЧИТЬ ДВИГАТЕЛЬ";
+            btn.innerText = "🛑 ОТКЛЮЧИТЬ ТЯГУ";
             btn.className = "active";
             dashEng.innerText = "ВКЛ";
-            dashEng.style.color = "#22c55e";
-            playBeep(120, 'sawtooth', 0.1);
+            dashEng.style.color = "#34d399";
+            playBeep(140, 'sawtooth', 0.1);
         } else {
-            btn.innerText = "🔥 ВКЛЮЧИТЬ ДВИГАТЕЛЬ";
+            btn.innerText = "🔥 ВКЛЮЧИТЬ ТЯГУ";
             btn.className = "";
             dashEng.innerText = "ВЫКЛ";
-            dashEng.style.color = "#ef4444";
+            dashEng.style.color = "#f87171";
         }
     }
 
     function updatePhysics() {
-        // Расход топлива
+        // Уменьшенный расход топлива (хватит надолго!)
         if (engineOn && fuel > 0) {
-            fuel -= 0.6;
-            if (navigator.vibrate && Math.random() > 0.5) navigator.vibrate(20);
+            fuel -= 0.3;
             if (fuel <= 0) {
                 fuel = 0;
-                if (engineOn) toggleEngine(); // Автоотключение если сожгли всё топливо
+                if (engineOn) toggleEngine();
             }
         }
 
-        // Физика
-        let drag = (chute * 0.001) / (mass * 0.015); 
-        let marsGravity = 0.25 + (mass * 0.003); 
-        let engineThrust = (engineOn && fuel > 0) ? 0.75 : 0; 
+        // АССИСТЕНТ ПОСАДКИ (Помощник у самой земли):
+        // Если человек близко к земле и сильно падает — автопилот сам слегка включает тягу!
+        let autoThrust = 0;
+        if (alt < 120 && vel > 7.0 && fuel > 0) {
+            autoThrust = 0.4; 
+        }
 
-        let accel = marsGravity - drag - engineThrust;
+        let callistoGravity = 0.12 + (mass * 0.001); 
+        let engineThrust = (engineOn && fuel > 0) ? 0.65 : 0; 
+
+        let accel = callistoGravity - engineThrust - autoThrust;
         vel += accel;
 
-        alt -= vel * 0.4;
+        // Не даем улетать вверх с бешеной скоростью
+        if (vel < -3) vel = -3;
+
+        alt -= vel * 0.35;
 
         // Телеметрия
         document.getElementById('d-alt').innerText = Math.max(0, Math.round(alt));
@@ -188,38 +373,33 @@
         
         const fElem = document.getElementById('d-fuel');
         fElem.innerText = Math.round(fuel);
-        fElem.style.color = fuel < 25 ? "#ef4444" : "#22c55e";
 
         // Подсказки
         const hint = document.getElementById('hint');
-        if (fuel <= 0 && alt > 50) {
-            hint.innerText = "⚓ ТОПЛИВО КОНЧИЛОСЬ! Надейся на парашют!";
-            hint.style.color = "#ef4444";
-        } else if (vel > 12.0) {
-            hint.innerText = "⚠️ Падаешь слишком быстро! Врубай тягу!";
-            hint.style.color = "#ef4444";
-        } else if (vel < 0) {
-            hint.innerText = "🚀 Взлетаем вверх! Выключи двигатель!";
+        if (alt < 100 && vel > 7.0) {
+            hint.innerText = "🤖 АВТОПИЛОТ: Врубай двигатель для помощи!";
             hint.style.color = "#38bdf8";
-        } else if (vel <= 4.0) {
-            hint.innerText = "✅ Отличная скорость! Держи баланс!";
-            hint.style.color = "#22c55e";
+        } else if (vel <= 8.0) {
+            hint.innerText = "✅ Отличная скорость для посадки!";
+            hint.style.color = "#34d399";
         } else {
-            hint.innerText = "💡 Гаси скорость ближе к земле (лимит 4.0 м/с)";
+            hint.innerText = "💡 Нажми кнопку, чтобы притормозить!";
             hint.style.color = "#f59e0b";
         }
 
         draw();
 
-        // Проверки
+        // Улетел за 2000м
         if (alt >= 2000) {
             clearInterval(loop);
             showResult("space");
         }
 
+        // Касание земли
         if (alt <= 0) {
             clearInterval(loop);
-            showResult(vel <= 4.0 ? "success" : "crash");
+            // Допуск посадки увеличен до 8.0 м/с!
+            showResult(vel <= 8.0 ? "success" : "crash");
         }
     }
 
@@ -231,62 +411,51 @@
 
         ctx.clearRect(0, 0, w, h);
 
-        // Поверхность Марса
-        ctx.fillStyle = '#9a3412';
-        ctx.fillRect(0, h - 25, w, 25);
+        for(let s of stars) {
+            ctx.fillStyle = `rgba(255, 255, 255, ${s.alpha})`;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+            ctx.fill();
+        }
 
-        let y = h - 25 - (alt * (h - 90) / 1000) - 20;
+        // Юпитер
+        let jupiterGrad = ctx.createLinearGradient(w - 60, 20, w + 40, 120);
+        jupiterGrad.addColorStop(0, 'rgba(234, 179, 8, 0.3)');
+        jupiterGrad.addColorStop(1, 'rgba(194, 65, 12, 0.1)');
+        ctx.fillStyle = jupiterGrad;
+        ctx.beginPath();
+        ctx.arc(w - 20, 30, 70, 0, Math.PI*2);
+        ctx.fill();
+
+        // Поверхность Каллисто
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, h - 30, w, 30);
+
+        let y = h - 30 - (alt * (h - 90) / 1000) - 18;
         if (y < 20) y = 20;
 
-        // Пыль от двигателя у земли
-        if (engineOn && alt < 150) {
-            particles.push({
-                x: w/2 + (Math.random()*30 - 15),
-                y: h - 25,
-                r: Math.random()*8 + 2,
-                alpha: 1
-            });
-        }
+        // Посадочный аппарат
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(w/2 - 12, y, 24, 16);
+        
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(w/2 - 5, y + 4, 10, 5);
 
-        // Отрисовка частиц пыли
-        for(let i = 0; i < particles.length; i++) {
-            let p = particles[i];
-            ctx.fillStyle = `rgba(180, 83, 9, ${p.alpha})`;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-            ctx.fill();
-            p.y -= 0.5;
-            p.alpha -= 0.05;
-        }
-        particles = particles.filter(p => p.alpha > 0);
+        // Стойки
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(w/2 - 12, y + 16); ctx.lineTo(w/2 - 18, y + 22);
+        ctx.moveTo(w/2 + 12, y + 16); ctx.lineTo(w/2 + 18, y + 22);
+        ctx.stroke();
 
-        // Парашют
-        if (chute > 0) {
+        // Пламя двигателей
+        if (engineOn && fuel > 0) {
             ctx.fillStyle = '#f97316';
             ctx.beginPath();
-            ctx.arc(w/2, y - 22, chute/2.5, Math.PI, 0);
-            ctx.fill();
-            ctx.strokeStyle = '#94a3b8';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(w/2 - chute/2.5, y - 22); ctx.lineTo(w/2, y);
-            ctx.moveTo(w/2 + chute/2.5, y - 22); ctx.lineTo(w/2, y);
-            ctx.stroke();
-        }
-
-        // Аппарат
-        ctx.fillStyle = '#e2e8f0';
-        ctx.fillRect(w/2 - 14, y, 28, 18);
-        ctx.fillStyle = '#38bdf8';
-        ctx.fillRect(w/2 - 6, y + 3, 12, 6);
-
-        // Пламя
-        if (engineOn && fuel > 0) {
-            ctx.fillStyle = '#ef4444';
-            ctx.beginPath();
-            ctx.moveTo(w/2 - 10, y + 18);
-            ctx.lineTo(w/2 + 10, y + 18);
-            ctx.lineTo(w/2, y + 36);
+            ctx.moveTo(w/2 - 8, y + 16);
+            ctx.lineTo(w/2 + 8, y + 16);
+            ctx.lineTo(w/2, y + 32);
             ctx.fill();
         }
     }
@@ -298,33 +467,50 @@
         const status = document.getElementById('res-status');
         const desc = document.getElementById('res-desc');
         const tzBox = document.getElementById('tz-box');
+        const resBtn = document.getElementById('res-btn');
 
         if (type === "success") {
             playBeep(600, 'sine', 0.3);
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-            
-            status.innerText = "🎉 МЯГКАЯ ПОСАДКА!";
+            status.innerText = "🎉 ПОСАДКА УСПЕШНА!";
             status.className = "res-title success";
-            desc.innerText = `Скорость касания: ${vel.toFixed(1)} м/с. Идеально! Марсоход цел, забирай ТЗ на сборку.`;
+            desc.innerText = `Отличный результат! Скорость касания: ${vel.toFixed(1)} м/с. Забирай ТЗ на сборку.`;
             
-            document.getElementById('tz-chute').innerText = chute + " см";
-            document.getElementById('tz-dampers').innerText = mass > 60 ? "4 зоны (усиленные)" : "2 зоны";
+            document.getElementById('tz-dampers').innerText = mass > 60 ? "4 усиленные стойки" : "2 стандартные стойки";
             document.getElementById('tz-mass').innerText = mass > 60 ? "3 маркера (~45г)" : "1 маркер (~15г)";
+            document.getElementById('tz-chute').innerText = "Легкий корпус без парашюта";
             tzBox.style.display = "block";
-        } else if (type === "space") {
-            playBeep(150, 'sawtooth', 0.4);
-            status.innerText = "🚀 УЛЕТЕЛ В КОСМОС!";
-            status.className = "res-title crash";
-            desc.innerText = "Вы превысили высоту 2000 м и улетели с Марса. Не передерживай двигатель!";
+            resBtn.innerText = "🔄 Сыграть ещё раз";
         } else {
-            playBeep(80, 'square', 0.5);
-            if (navigator.vibrate) navigator.vibrate(400);
-            
-            status.innerText = "💥 ВЗРЫВ ПРИ ПОСАДКЕ!";
-            status.className = "res-title crash";
-            desc.innerText = `Скорость касания: ${vel.toFixed(1)} м/с (Лимит — 4.0 м/с). Модуль разбился! Попробуй скорректировать массу или диаметр парашюта.`;
+            lives--;
+            updateLivesUI();
+            playBeep(90, 'square', 0.4);
+            tzBox.style.display = "none";
+
+            if (lives > 0) {
+                status.innerText = type === "space" ? "🌌 УЛЕТЕЛ В КОСМОС!" : "💥 СИЛЬНЫЙ УДАР!";
+                status.className = "res-title crash";
+                desc.innerText = `Скорость: ${vel.toFixed(1)} м/с. Модуль повреждён. Осталось жизней: ${lives}.`;
+                resBtn.innerText = "🔄 Попробовать снова";
+            } else {
+                status.innerText = "💀 GAME OVER!";
+                status.className = "res-title crash";
+                desc.innerText = "Все 3 жизни потрачены. Попробуй изменить параметры массы и скорости!";
+                resBtn.innerText = "🚀 Начать с начала";
+            }
         }
     }
+
+    function nextAttempt() {
+        if (lives <= 0) {
+            lives = 3;
+            updateLivesUI();
+        }
+        document.getElementById('result-screen').style.display = 'none';
+        document.getElementById('setup-screen').style.display = 'block';
+    }
+
+    // Инициализация жизней
+    updateLivesUI();
 </script>
 
 </body>
