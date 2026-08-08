@@ -27,6 +27,18 @@
             max-width: 380px; 
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); 
             border: 1px solid #1f2937;
+            transition: transform 0.1s;
+        }
+
+        .shake {
+            animation: shakeAnim 0.4s ease-in-out;
+        }
+        @keyframes shakeAnim {
+            0%, 100% { transform: translate(0, 0); }
+            20% { transform: translate(-8px, 5px); }
+            40% { transform: translate(8px, -5px); }
+            60% { transform: translate(-5px, 3px); }
+            80% { transform: translate(5px, -3px); }
         }
 
         .top-bar {
@@ -114,12 +126,7 @@
             text-align: right;
         }
 
-        /* Управление режимами тяги */
-        .thrust-controls {
-            display: flex;
-            gap: 6px;
-            margin-top: 12px;
-        }
+        .thrust-controls { display: flex; gap: 6px; margin-top: 12px; }
         .t-btn {
             flex: 1;
             padding: 14px 4px;
@@ -136,10 +143,41 @@
         .t-btn.max.active { background: #dc2626; border-color: #ef4444; }
 
         #result-screen { display: none; text-align: center; padding: 10px 0; }
-        .res-title { font-size: 22px; font-weight: 800; margin-bottom: 10px; }
+        .res-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
         .success { color: #22c55e; }
         .warning { color: #f59e0b; }
         .crash { color: #ef4444; }
+
+        .advice-box {
+            background: #1f2937;
+            border-left: 4px solid #38bdf8;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #d1d5db;
+            text-align: left;
+            margin: 12px 0;
+            line-height: 1.4;
+        }
+
+        .achievement-box {
+            background: linear-gradient(135deg, #1e1b4b, #311042);
+            border: 2px solid #f59e0b;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            color: #fef08a;
+            text-align: center;
+            margin: 12px 0;
+            line-height: 1.4;
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+        }
+        .achievement-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #fbbf24;
+            margin-bottom: 4px;
+        }
         
         .btn-action { 
             width: 100%; 
@@ -150,14 +188,14 @@
             border-radius: 12px; 
             font-weight: 700; 
             font-size: 15px; 
-            margin-top: 14px; 
+            margin-top: 10px; 
             cursor: pointer; 
         }
     </style>
 </head>
 <body>
 
-<div class="card">
+<div class="card" id="main-card">
     <div class="top-bar">
         <h2>🪐 Посадка на Каллисто</h2>
         <div class="lives-box" id="lives-display">❤️❤️❤️</div>
@@ -166,7 +204,7 @@
     <!-- 1. Настройка параметров -->
     <div id="setup-screen">
         <div class="param-group">
-            <label>Тип сопла двигателей:</label>
+            <label>Количество двигателей:</label>
             <div class="engines-select">
                 <div class="engine-opt" onclick="selectEngines(1, this)">1 Двиг.</div>
                 <div class="engine-opt selected" onclick="selectEngines(2, this)">2 Двиг.</div>
@@ -175,9 +213,9 @@
         </div>
 
         <div class="param-group">
-            <label>Запас топлива (Масса): <span class="val" id="fuel-val">60 %</span></label>
+            <label>Запас топлива: <span class="val" id="fuel-val">60 %</span></label>
             <input type="range" id="fuel-input" min="30" max="100" value="60" oninput="document.getElementById('fuel-val').innerText = this.value + ' %'">
-            <div style="font-size: 11px; color: #6b7280; margin-top: 6px;">💡 Чем больше топлива, тем тяжелее корабль!</div>
+            <div style="font-size: 11px; color: #6b7280; margin-top: 6px;">💡 Больше топлива даёт больше времени на маневры</div>
         </div>
 
         <button class="btn-action" onclick="startFlight()">🚀 НАЧАТЬ СПУСК</button>
@@ -197,7 +235,6 @@
             <canvas id="canvas"></canvas>
         </div>
         
-        <!-- Переключатель мощностей -->
         <div class="thrust-controls">
             <button class="t-btn off active" onclick="setThrust(0)">🛑 ВЫКЛ</button>
             <button class="t-btn mid" onclick="setThrust(0.5)">⚡ 50%</button>
@@ -208,16 +245,26 @@
     <!-- 3. Итог -->
     <div id="result-screen">
         <div id="res-status" class="res-title"></div>
-        <div id="res-desc" style="font-size: 14px; color: #9ca3af; margin-bottom: 16px;"></div>
+        <div id="res-desc" style="font-size: 14px; color: #9ca3af;"></div>
+        
+        <!-- Блок достижений -->
+        <div id="achievement-container" class="achievement-box" style="display: none;"></div>
+
+        <!-- Окно с умным советом -->
+        <div id="advice-container" class="advice-box" style="display: none;"></div>
+
         <button id="res-btn" class="btn-action" onclick="nextAttempt()">🔄 СЛЕДУЮЩАЯ ПОПЫТКА</button>
     </div>
 </div>
 
 <script>
     let lives = 3;
+    let successfulLandings = 0; 
+    let livesLostInRun = 0;      
     let numEngines = 2;
     let fuelCap = 60, currentFuel = 100;
     let alt = 1000, vel = 15, thrustLevel = 0; 
+    let particles = [];
     let loop;
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -234,6 +281,13 @@
             gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
             osc.stop(audioCtx.currentTime + duration);
         } catch(e) {}
+    }
+
+    function triggerShake() {
+        const card = document.getElementById('main-card');
+        card.classList.remove('shake');
+        void card.offsetWidth;
+        card.classList.add('shake');
     }
 
     function selectEngines(count, elem) {
@@ -259,6 +313,7 @@
         vel = 15;
         alt = 1000;
         thrustLevel = 0;
+        particles = [];
         updateThrustUI();
 
         document.getElementById('setup-screen').style.display = 'none';
@@ -292,52 +347,45 @@
     }
 
     function updatePhysics() {
-        // Расход топлива зависит от уровня тяги и числа двигателей
         if (thrustLevel > 0 && currentFuel > 0) {
-            currentFuel -= (numEngines * thrustLevel * 0.35);
+            currentFuel -= (numEngines * thrustLevel * 0.32);
             if (currentFuel <= 0) {
                 currentFuel = 0;
                 setThrust(0);
             }
         }
 
-        // Зависимость гравитации от оставшейся массы топлива (Физика!)
-        let massFactor = 0.18 + (currentFuel * 0.0012); 
-        
-        // Сила тяги двигателей
+        let massFactor = 0.18 + (currentFuel * 0.001); 
         let thrustPower = (numEngines * thrustLevel * 0.38); 
 
         vel += (massFactor - thrustPower);
-        if (vel < -3) vel = -3; // Ограничение на скорость подъема
+        if (vel < -3) vel = -3;
 
         alt -= vel * 0.35;
 
-        // Телеметрия
         document.getElementById('d-alt').innerText = Math.max(0, Math.round(alt));
         
         const velElem = document.getElementById('d-vel');
         velElem.innerText = vel.toFixed(1);
         
-        // Цвет скорости
         if (vel <= 4.0) velElem.style.color = "#22c55e";
         else if (vel <= 9.0) velElem.style.color = "#f59e0b";
         else velElem.style.color = "#ef4444";
         
         document.getElementById('d-fuel').innerText = Math.round(currentFuel);
 
-        // Подсказка
         const hint = document.getElementById('hint');
         if (currentFuel <= 0) {
             hint.innerText = "⚠️ Топливо кончилось!";
             hint.style.color = "#ef4444";
         } else if (vel <= 4.0) {
-            hint.innerText = "🌟 Идеальная скорость!";
+            hint.innerText = "🌟 Отличная скорость!";
             hint.style.color = "#22c55e";
         } else if (vel <= 9.0) {
-            hint.innerText = "⚠️ Будет жестковато!";
+            hint.innerText = "⚠️ Скорость высоковата!";
             hint.style.color = "#f59e0b";
         } else {
-            hint.innerText = "🔴 Гаси скорость!";
+            hint.innerText = "🔴 СНИЖАЙ СКОРОСТЬ!";
             hint.style.color = "#ef4444";
         }
 
@@ -364,47 +412,64 @@
 
         ctx.clearRect(0, 0, w, h);
 
-        // Поверхность
         ctx.fillStyle = '#374151';
         ctx.fillRect(0, h - 20, w, 20);
 
         let y = h - 20 - (alt * (h - 80) / 1000) - 20;
         if (y < 20) y = 20;
 
-        // Корабль
+        if (thrustLevel > 0 && currentFuel > 0) {
+            for(let i = 0; i < numEngines * 2; i++) {
+                particles.push({
+                    x: w/2 + (Math.random() * 20 - 10),
+                    y: y + 18,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: Math.random() * 3 + 2,
+                    life: 1,
+                    color: Math.random() > 0.3 ? '#f97316' : '#ef4444'
+                });
+            }
+        }
+
+        if (alt < 150 && thrustLevel > 0) {
+            particles.push({
+                x: w/2 + (Math.random() * 60 - 30),
+                y: h - 20,
+                vx: (Math.random() - 0.5) * 6,
+                vy: -Math.random() * 2,
+                life: 0.8,
+                color: '#6b7280'
+            });
+        }
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.life;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 2 + (1 - p.life) * 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.05;
+
+            if (p.life <= 0) particles.splice(i, 1);
+        }
+
         ctx.fillStyle = '#9ca3af';
         ctx.fillRect(w/2 - 14, y, 28, 16);
         
         ctx.fillStyle = '#38bdf8';
         ctx.fillRect(w/2 - 6, y + 3, 12, 5);
 
-        // Стойки
         ctx.strokeStyle = '#6b7280';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(w/2 - 14, y + 16); ctx.lineTo(w/2 - 20, y + 22);
         ctx.moveTo(w/2 + 14, y + 16); ctx.lineTo(w/2 + 20, y + 22);
         ctx.stroke();
-
-        // Отрисовка пламени в зависимости от мощности
-        if (thrustLevel > 0 && currentFuel > 0) {
-            ctx.fillStyle = thrustLevel === 1.0 ? '#ef4444' : '#f97316';
-            let flameLen = thrustLevel * 16;
-
-            if (numEngines === 1) {
-                ctx.beginPath();
-                ctx.moveTo(w/2 - 5, y + 16); ctx.lineTo(w/2 + 5, y + 16); ctx.lineTo(w/2, y + 16 + flameLen); ctx.fill();
-            } else if (numEngines === 2) {
-                ctx.beginPath();
-                ctx.moveTo(w/2 - 10, y + 16); ctx.lineTo(w/2 - 2, y + 16); ctx.lineTo(w/2 - 6, y + 16 + flameLen);
-                ctx.moveTo(w/2 + 2, y + 16); ctx.lineTo(w/2 + 10, y + 16); ctx.lineTo(w/2 + 6, y + 16 + flameLen); ctx.fill();
-            } else {
-                ctx.beginPath();
-                ctx.moveTo(w/2 - 12, y + 16); ctx.lineTo(w/2 - 6, y + 16); ctx.lineTo(w/2 - 9, y + 16 + flameLen);
-                ctx.moveTo(w/2 - 4, y + 16); ctx.lineTo(w/2 + 4, y + 16); ctx.lineTo(w/2, y + 16 + flameLen * 1.2);
-                ctx.moveTo(w/2 + 6, y + 16); ctx.lineTo(w/2 + 12, y + 16); ctx.lineTo(w/2 + 9, y + 16 + flameLen); ctx.fill();
-            }
-        }
     }
 
     function showResult(type) {
@@ -413,37 +478,97 @@
 
         const status = document.getElementById('res-status');
         const desc = document.getElementById('res-desc');
+        const advice = document.getElementById('advice-container');
+        const achievement = document.getElementById('achievement-container');
         const resBtn = document.getElementById('res-btn');
 
-        if (type === "perfect") {
+        advice.style.display = "none";
+        achievement.style.display = "none";
+
+        if (type === "perfect" || type === "hard") {
+            successfulLandings++;
             playBeep(600, 'sine', 0.3);
-            status.innerText = "🌟 ИДЕАЛЬНАЯ ПОСАДКА!";
-            status.className = "res-title success";
-            desc.innerText = `Ювелирная точность! Скорость: ${vel.toFixed(1)} м/с. Корабль цел, экипаж ликует!`;
-            resBtn.innerText = "🔄 Сыграть ещё раз";
-        } else if (type === "hard") {
-            lives--;
-            updateLivesUI();
-            playBeep(300, 'triangle', 0.3);
-            status.innerText = "⚠️ ЖЕСТКАЯ ПОСАДКА!";
-            status.className = "res-title warning";
-            desc.innerText = `Скорость: ${vel.toFixed(1)} м/с. Шасси сломаны (-1 жизнь), но экипаж спасен!`;
-            resBtn.innerText = lives > 0 ? "🔄 Попробовать улучшить" : "🚀 Начать с начала";
+
+            if (type === "perfect") {
+                status.innerText = "🌟 ИДЕАЛЬНО!";
+                status.className = "res-title success";
+                desc.innerText = `Скорость касания: ${vel.toFixed(1)} м/с. Безупречное выполнение!`;
+            } else {
+                status.innerText = "⚠️ ЖЁСТКАЯ ПОСАДКА";
+                status.className = "res-title warning";
+                desc.innerText = `Скорость: ${vel.toFixed(1)} м/с. Корабль цел, но посадка жестковата.`;
+            }
+
+            // --- ПРОВЕРКА ДОСТИЖЕНИЙ ---
+            
+            // 1. Три успешные посадки подряд без потерь
+            if (successfulLandings >= 3 && livesLostInRun === 0) {
+                achievement.style.display = "block";
+                achievement.innerHTML = `
+                    <div class="achievement-title">🏆 ДОСТИЖЕНИЕ: АБСОЛЮТНЫЙ РЕКОРД</div>
+                    Три безупречные посадки подряд без единой аварии! Полный контроль над ситуацией и высший пилотаж! 🚀
+                `;
+            } 
+            // 2. Две успешные посадки с 1 потерей жизни
+            else if (successfulLandings >= 2 && livesLostInRun === 1) {
+                achievement.style.display = "block";
+                achievement.innerHTML = `
+                    <div class="achievement-title">🎖️ ДОСТИЖЕНИЕ: РАБОТА НАД ОШИБКАМИ</div>
+                    Одна неудача тебя не остановила. Ты сделал правильные выводы и посадил корабль дважды подряд! 💪
+                `;
+            }
+            // 3. Посадка после двух потерь (на последней жизни)
+            else if (livesLostInRun === 2) {
+                achievement.style.display = "block";
+                achievement.innerHTML = `
+                    <div class="achievement-title">🔥 ДОСТИЖЕНИЕ: ВЫДЕРЖКА И РАСЧЁТ</div>
+                    Оставалась всего одна попытка и никакого права на ошибку, но ты справился! Холодный расчёт и полная концентрация! ⚡
+                `;
+            }
+
+            resBtn.innerText = "🔄 Посадить ещё раз";
+
         } else {
+            // Крушение или космос
             lives--;
+            livesLostInRun++;
             updateLivesUI();
             playBeep(90, 'square', 0.4);
+            triggerShake();
 
-            status.innerText = type === "space" ? "🌌 УЛЕТЕЛ В КОСМОС!" : "💥 АВАРИЯ!";
-            status.className = "res-title crash";
-            desc.innerText = `Скорость касания: ${vel.toFixed(1)} м/с. Слишком жестко!`;
-            resBtn.innerText = lives > 0 ? "🔄 Попробовать снова" : "🚀 Начать с начала";
+            if (lives > 0) {
+                status.innerText = type === "space" ? "🌌 УЛЕТЕЛ В КОСМОС!" : "💥 ВЗРЫВ ПРИ УДАРЕ!";
+                status.className = "res-title crash";
+                desc.innerText = `Скорость касания: ${vel.toFixed(1)} м/с. Потеряна 1 жизнь!`;
+
+                advice.style.display = "block";
+                if (type === "space") {
+                    advice.innerHTML = "💡 <b>Совет:</b> Тяга 100% горела слишком долго. Вовремя выключай двигатели!";
+                } else if (currentFuel <= 0) {
+                    advice.innerHTML = "💡 <b>Совет:</b> Закончилось топливо! Увеличь бак или используй режим 50%!";
+                } else {
+                    advice.innerHTML = "💡 <b>Совет:</b> Включай 100% тягу чуть раньше — примерно на 350 метрах!";
+                }
+
+                resBtn.innerText = "🔄 Попробовать снова";
+            } else {
+                status.innerText = "💀 ИГРА ОКОНЧЕНА";
+                status.className = "res-title crash";
+                desc.innerText = "Все 3 жизни потрачены. Попробуй сначала!";
+                
+                advice.style.display = "block";
+                advice.innerHTML = "💡 <b>Подсказка:</b> Возьми 2 двигателя, заправь 70% топлива и включи 100% тяги на 350 м!";
+
+                resBtn.innerText = "🚀 НАЧАТЬ ЗАНОВО";
+            }
         }
     }
 
     function nextAttempt() {
         if (lives <= 0) {
             lives = 3;
+            successfulLandings = 0;
+            livesLostInRun = 0;
             updateLivesUI();
         }
         document.getElementById('result-screen').style.display = 'none';
