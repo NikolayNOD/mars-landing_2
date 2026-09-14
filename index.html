@@ -1,168 +1,334 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Каллисто: Инженерный вызов</title>
-<style>
-    /* Визуальный стиль «Sci-Fi Terminal» */
-    body { 
-        background-color: #0b0c10; /* Темная космическая тема */
-        color: #00f3ff; /* Бирюзовый для систем */
-        font-family: 'Courier New', Courier, monospace; /* Шрифты в стиле консолей */
-        padding: 20px; 
-    }
-    .container { 
-        border: 2px solid #00f3ff; 
-        box-shadow: 0 0 15px #00f3ff; 
-        padding: 20px; 
-        max-width: 600px; 
-        margin: auto; 
-    }
-    h1, h3 { text-align: center; text-transform: uppercase; }
-    
-    /* Неоновые акценты */
-    .warning { color: #ffaa00; } /* Оранжевый для предупреждений */
-    .success { color: #39ff14; } /* Кислотно-зеленый для успешных расчетов */
-    
-    /* Живые графики */
-    .bar-container { 
-        background: #1f2833; 
-        height: 25px; 
-        border: 1px solid #00f3ff; 
-        margin-bottom: 20px; 
-        position: relative;
-    }
-    .bar { 
-        height: 100%; 
-        width: 0%; 
-        background: #00f3ff; 
-        transition: width 0.3s ease-in-out, background-color 0.3s; 
-    }
-    .bar.energy-ok { background: #39ff14; }
-    
-    /* Красная тревога и пульсация */
-    .bar.overload { 
-        background: red; 
-        animation: pulse 1s infinite; 
-    }
-    @keyframes pulse { 
-        0% { opacity: 1; } 
-        50% { opacity: 0.3; } 
-        100% { opacity: 1; } 
-    }
-    
-    .btn { 
-        background: #1f2833; 
-        color: #00f3ff; 
-        border: 1px solid #00f3ff; 
-        padding: 10px 15px; 
-        cursor: pointer; 
-        margin: 5px; 
-        font-family: 'Courier New', Courier, monospace;
-        font-weight: bold;
-        transition: 0.2s;
-    }
-    .btn:hover { background: #00f3ff; color: #0b0c10; box-shadow: 0 0 10px #00f3ff; }
-    .btn-reset { border-color: #ffaa00; color: #ffaa00; }
-    .btn-reset:hover { background: #ffaa00; color: #0b0c10; box-shadow: 0 0 10px #ffaa00; }
-    
-    #ai-console { 
-        border-left: 4px solid #00f3ff; 
-        padding: 10px; 
-        margin: 20px 0; 
-        background: rgba(0, 243, 255, 0.05);
-        min-height: 40px;
-    }
-    .inventory { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 15px; }
-</style>
-</head>
-<body>
+import React, { useState, useRef, useEffect } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Sphere, Box, Cylinder, Stars, Html } from '@react-three/drei';
+import * as THREE from 'three';
+import { create } from 'zustand';
+import { motion, AnimatePresence } from 'framer-motion';
 
-<div class="container">
-    <h1>Каллисто: Инженерный вызов</h1>
-    
-    <div id="ai-console">
-        <strong>АЛЬФА:</strong> Добро пожаловать, инженер. Ожидаю сборку модулей аппарата.
+// ==========================================
+// 1. БАЗА ДАННЫХ И СОСТОЯНИЕ (Zustand)
+// ==========================================
+const BASE_MASS = 15; // Базовая масса аппарата
+const MAX_MASS = 60; // Лимит полезной нагрузки
+const G_0 = 9.81; // Ускорение свободного падения
+const I_SP = 320; // Удельный импульс
+const EPSILON = 0.1; // Коэффициент массы конструкции
+
+const INSTRUMENTS_DB = [
+  { id: 'drill', name: 'Глубоководный бур', mass: 12.5, energy: -40, type: 'science' }, //[cite: 1]
+  { id: 'spectro', name: 'Масс-спектрометр', mass: 5.0, energy: -15, type: 'science' }, //[cite: 1]
+  { id: 'cam', name: 'HD-Камера', mass: 2.5, energy: -5, type: 'science' }, //[cite: 1]
+  { id: 'rtg', name: 'РИТЭГ (Генератор)', mass: 15.0, energy: 60, type: 'power' }, //[cite: 1]
+];
+
+const useStore = create((set, get) => ({
+  stage: 'map', // 'map' -> 'build' -> 'launch'
+  setStage: (stage) => set({ stage }),
+  
+  selectedPOI: null,
+  selectPOI: (poi) => set({ selectedPOI: poi }),
+  
+  nUnits: 1,
+  selectedInstruments: [],
+  addInstrument: (inst) => {
+    // Имитация тактильной отдачи (Haptic feedback)[cite: 1]
+    if (navigator.vibrate) navigator.vibrate(50);
+    set((state) => ({ selectedInstruments: [...state.selectedInstruments, inst] }));
+  },
+  removeInstrument: (index) => {
+    if (navigator.vibrate) navigator.vibrate(30);
+    set((state) => ({
+      selectedInstruments: state.selectedInstruments.filter((_, i) => i !== index)
+    }));
+  },
+  
+  fuelAmount: 1000,
+  setFuel: (val) => set({ fuelAmount: val }),
+}));
+
+// ==========================================
+// 2. ИГРОВЫЕ 3D-МОДУЛИ
+// ==========================================
+
+// Модуль 1: Луна Каллисто (3D-исследование)[cite: 1]
+const CallistoMap = () => {
+  const { selectPOI, setStage } = useStore();
+  const moonRef = useRef();
+
+  useFrame(() => {
+    if (moonRef.current) moonRef.current.rotation.y += 0.001; // Плавное вращение
+  });
+
+  const handlePOIClick = (name, deltaV) => {
+    selectPOI({ name, deltaV });
+    setStage('build');
+  };
+
+  return (
+    <group>
+      <ambientLight intensity={0.1} />
+      {/* Освещение от удаленного Солнца[cite: 1] */}
+      <directionalLight position={[10, 5, -10]} intensity={2} color="#ffffff" />
+      
+      {/* Высокополигональная 3D-модель луны (заглушка)[cite: 1] */}
+      <Sphere ref={moonRef} args={[2, 64, 64]} position={[0, 0, 0]}>
+        <meshStandardMaterial color="#445566" roughness={0.8} />
+      </Sphere>
+
+      {/* Пульсирующие 3D-маркеры (Points of Interest)[cite: 1] */}
+      <Html position={[1.5, 1, 1.5]} center>
+        <div className="poi-marker" onClick={() => handlePOIClick('Кратер Валхалла', 2500)}>
+          <div className="pulse"></div>
+          <span>Валхалла</span>
+        </div>
+      </Html>
+      <Html position={[-1.5, -0.5, 1]} center>
+        <div className="poi-marker" onClick={() => handlePOIClick('Ледяное плато', 2100)}>
+          <div className="pulse"></div>
+          <span>Ледяное плато</span>
+        </div>
+      </Html>
+    </group>
+  );
+};
+
+// Модуль 2: Базовая 3D-модель посадочного модуля[cite: 1]
+const LanderBuilder = () => {
+  const { selectedInstruments } = useStore();
+  
+  return (
+    <group position={[0, -1, 0]}>
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[5, 10, 5]} intensity={1.5} />
+      {/* Ядро модуля */}
+      <Cylinder args={[1, 1, 1.5, 16]}>
+        <meshStandardMaterial color="#0d47a1" /> {/* Цветовая палитра: глубокий космос[cite: 1] */}
+      </Cylinder>
+      {/* Отрисовка добавленных деталей (визуальная обратная связь) */}
+      {selectedInstruments.map((inst, i) => (
+        <Box key={i} args={[0.4, 0.4, 0.4]} position={[Math.cos(i) * 1.2, 0, Math.sin(i) * 1.2]}>
+          <meshStandardMaterial color={inst.type === 'power' ? '#ff9800' : '#00e5ff'} />
+        </Box>
+      ))}
+    </group>
+  );
+};
+
+// ==========================================
+// 3. UI/UX: BOTTOM SHEETS & MENUS (Sci-Fi Terminal)[cite: 1]
+// ==========================================
+
+const AIAlpha = ({ text, type = 'normal' }) => {
+  // Саркастичный текстовый ИИ-помощник «Альфа»[cite: 1]
+  const color = type === 'error' ? '#ff3333' : type === 'success' ? '#64dd17' : '#00e5ff';
+  return (
+    <div className="ai-message" style={{ borderLeft: `4px solid ${color}` }}>
+      <strong>[Альфа]:</strong> {text}
     </div>
+  );
+};
 
-    <h3>Модуль 2: Конструктор аппарата</h3>
-    
-    <div>Масса аппарата: <span id="mass-text" class="success">0</span> / 60 кг</div>
-    <div class="bar-container">
-        <div id="mass-bar" class="bar"></div>
+const UIOverlay = () => {
+  const { stage, setStage, selectedPOI, selectedInstruments, addInstrument, removeInstrument, fuelAmount, setFuel } = useStore();
+
+  // Расчет массы
+  const instrumentsMass = selectedInstruments.reduce((sum, inst) => sum + inst.mass, 0);
+  const totalMass = BASE_MASS + instrumentsMass; // Формула массы (N_units = 1 для простоты)[cite: 1]
+  const isOverweight = totalMass > MAX_MASS; // Лимит полезной нагрузки: Max 60 кг[cite: 1]
+
+  // Расчет физики (Уравнение Циолковского)[cite: 1]
+  let requiredM0 = 0;
+  if (selectedPOI) {
+    const exponent = Math.exp((selectedPOI.deltaV / (I_SP * G_0)) + (EPSILON / (1 - EPSILON)));
+    requiredM0 = totalMass * exponent; // m_0 = m_total * Math.exp(...)[cite: 1]
+  }
+  const isFuelEnough = fuelAmount >= requiredM0 - totalMass;
+
+  return (
+    <div className="ui-container">
+      <AnimatePresence>
+        
+        {/* Шторка Модуля 1 */}
+        {stage === 'map' && (
+          <motion.div initial={{ y: 300 }} animate={{ y: 0 }} exit={{ y: 300 }} className="bottom-sheet">
+            <AIAlpha text="Орбита достигнута. Жми на маркер, чтобы выбрать зону посадки. И постарайся не разбиться сразу." />
+            <h2>Выбор точки посадки</h2>
+            <p>Вращай луну свайпами. Найди подходящий биом.</p>
+          </motion.div>
+        )}
+
+        {/* Шторка Модуля 2: Конструктор[cite: 1] */}
+        {stage === 'build' && (
+          <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="bottom-sheet">
+            <button className="btn-back" onClick={() => setStage('map')}>← Назад к орбите</button>
+            <div className="header-flex">
+              <h2>Сборка зонда: {selectedPOI?.name}</h2>
+              <span style={{ color: isOverweight ? '#ff3333' : '#00e5ff' }}>
+                Масса: {totalMass} / {MAX_MASS} кг
+              </span>
+            </div>
+
+            {isOverweight ? (
+               <AIAlpha type="error" text="Шеф, с таким весом мы не взлетим. Сбрасывай балласт!" /> 
+            ) : (
+               <AIAlpha text="Детали примагничиваются к слотам. Не забудь РИТЭГ, иначе замерзнем." />
+            )}
+
+            <div className="instruments-scroll">
+              {INSTRUMENTS_DB.map(inst => (
+                <div key={inst.id} className="instrument-card" onClick={() => addInstrument(inst)}>
+                  <h4>{inst.name}</h4>
+                  <small>{inst.mass} кг | {inst.energy > 0 ? '+' : ''}{inst.energy} Вт</small>
+                </div>
+              ))}
+            </div>
+
+            <div className="equipped-list">
+              {selectedInstruments.map((inst, i) => (
+                <span key={i} className="chip" onClick={() => removeInstrument(i)}>
+                  {inst.name} ✖
+                </span>
+              ))}
+            </div>
+
+            <button 
+              className="btn-primary" 
+              disabled={isOverweight} 
+              style={{ backgroundColor: isOverweight ? '#333' : '#64dd17' }} // Кислотно-зеленый (успех)[cite: 1]
+              onClick={() => setStage('launch')}
+            >
+              УТВЕРДИТЬ И ПЕРЕЙТИ К РАКЕТЕ
+            </button>
+          </motion.div>
+        )}
+
+        {/* Шторка Модуля 3: Расчет ракеты-носителя[cite: 1] */}
+        {stage === 'launch' && (
+          <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} className="bottom-sheet">
+            <button className="btn-back" onClick={() => setStage('build')}>← Назад к сборке</button>
+            <h2>Расчет ракеты-носителя</h2>
+            
+            <AIAlpha 
+              type={isFuelEnough ? 'success' : 'error'} 
+              text={isFuelEnough 
+                ? "Уравнение Циолковского сошлось. Тяга в норме." 
+                : "Топлива мало — ракета не долетит. Добавь горючего!"} 
+            />
+
+            <div className="physics-panel">
+              <p>Требуемый ΔV: <strong>{selectedPOI?.deltaV} м/с</strong></p>
+              <p>Масса ПН (m_total): <strong>{totalMass} кг</strong></p>
+              <p>Стартовая масса (m_0): <strong>{(totalMass + fuelAmount).toFixed(1)} кг</strong></p>
+              
+              <label className="slider-label">
+                Топливо (кг): {fuelAmount}
+                <input 
+                  type="range" min="100" max="15000" step="100"
+                  value={fuelAmount} 
+                  onChange={(e) => setFuel(Number(e.target.value))} 
+                />
+              </label>
+            </div>
+
+            <button 
+              className="btn-primary" 
+              disabled={!isFuelEnough}
+              style={{ backgroundColor: !isFuelEnough ? '#333' : '#64dd17' }}
+              onClick={() => alert('ЗАПУСК УСПЕШЕН! ПЕРЕХОД К МОДУЛЮ 4...')}
+            >
+              КЛЮЧ НА СТАРТ
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
+  );
+};
 
-    <div>Энергобаланс (Генерация/Потребление): <span id="energy-text" class="success">0</span></div>
-    <div class="bar-container">
-        <div id="energy-bar" class="bar energy-ok"></div>
-    </div>
+// ==========================================
+// ОСНОВНОЙ КОМПОНЕНТ ПРИЛОЖЕНИЯ
+// ==========================================
+export default function CallistoGame() {
+  const stage = useStore(state => state.stage);
 
-    <h3 style="margin-top: 30px;">Палитра приборов:</h3>
-    <div class="inventory">
-        <button class="btn" onclick="addComponent('Камера', 5, -2)">Камера (5кг, -2 эн.)</button>
-        <button class="btn" onclick="addComponent('Глубокий бур', 20, -10)">Глубокий бур (20кг, -10 эн.)</button>
-        <button class="btn" onclick="addComponent('РИТЭГ', 15, 15)">РИТЭГ (15кг, +15 эн.)</button>
-        <button class="btn btn-reset" onclick="resetShip()">Сброс сборки</button>
-    </div>
-</div>
+  return (
+    <div className="game-wrapper">
+      {/* 3D Сцена (Mobile-first, полная поддержка touch)[cite: 1] */}
+      <Canvas camera={{ position: [0, 2, 8] }}>
+        <color attach="background" args={['#050510']} /> {/* Цветовая палитра: глубокий космос[cite: 1] */}
+        <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+        
+        {stage === 'map' && <CallistoMap />}
+        {(stage === 'build' || stage === 'launch') && <LanderBuilder />}
+        
+        <OrbitControls enablePan={false} enableZoom={stage === 'map'} maxDistance={15} minDistance={3} />
+      </Canvas>
 
-<script>
-    let currentMass = 0;
-    let currentEnergy = 0;
-    const maxMass = 60;
+      {/* 2D UI Интерфейс поверх 3D */}
+      <UIOverlay />
 
-    function addComponent(name, mass, energy) {
-        currentMass += mass;
-        currentEnergy += energy;
-        updateInterface();
-    }
-
-    function resetShip() {
-        currentMass = 0;
-        currentEnergy = 0;
-        updateInterface();
-    }
-
-    function updateInterface() {
-        // Обновление текста
-        document.getElementById('mass-text').innerText = currentMass;
-        document.getElementById('energy-text').innerText = currentEnergy;
-
-        const aiConsole = document.getElementById('ai-console');
-        const massBar = document.getElementById('mass-bar');
-        const energyBar = document.getElementById('energy-bar');
-
-        // Логика Массы
-        let massPercent = (currentMass / maxMass) * 100;
-        massBar.style.width = Math.min(massPercent, 100) + '%';
-
-        if (currentMass > maxMass) {
-            massBar.classList.add('overload');
-            document.getElementById('mass-text').className = 'warning';
-            // Саркастичный комментарий ИИ при превышении веса
-            aiConsole.innerHTML = '<strong class="warning">АЛЬФА:</strong> <span class="warning">Шеф, с таким весом мы даже с орбиты Земли не улетим. Срочно сбрасываем балласт!</span>';
-        } else {
-            massBar.classList.remove('overload');
-            document.getElementById('mass-text').className = 'success';
-            aiConsole.innerHTML = '<strong>АЛЬФА:</strong> Установка прошла успешно. Системы в норме.';
+      {/* Встроенные стили для Sci-Fi Terminal (Dark Mode)[cite: 1] */}
+      <style>{`
+        * { box-sizing: border-box; user-select: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Courier New', monospace; background: #000; }
+        .game-wrapper { width: 100vw; height: 100vh; position: relative; }
+        
+        /* UI OVERLAY */
+        .ui-container { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: flex-end; }
+        
+        /* BOTTOM SHEET (Нижние шторки)[cite: 1] */
+        .bottom-sheet {
+          background: rgba(10, 15, 30, 0.95);
+          backdrop-filter: blur(10px);
+          border-top: 2px solid #00e5ff;
+          border-radius: 20px 20px 0 0;
+          padding: 20px;
+          color: #fff;
+          pointer-events: auto;
+          max-height: 60vh;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
         }
 
-        // Логика Энергии
-        if (currentEnergy < 0) {
-            // Если батарея разряжается быстрее, чем генерируют РИТЭГи
-            energyBar.style.width = '100%';
-            energyBar.classList.remove('energy-ok');
-            energyBar.classList.add('overload');
-            document.getElementById('energy-text').className = 'warning';
-        } else {
-            energyBar.style.width = Math.min((currentEnergy / 30) * 100, 100) + '%';
-            energyBar.classList.remove('overload');
-            energyBar.classList.add('energy-ok');
-            document.getElementById('energy-text').className = 'success';
-        }
-    }
-</script>
+        .header-flex { display: flex; justify-content: space-between; border-bottom: 1px solid #334; padding-bottom: 10px; }
+        .header-flex h2 { margin: 0; font-size: 1.2rem; }
+        
+        /* КНОПКА НАЗАД Обязательна на каждом экране[cite: 1] */
+        .btn-back { background: transparent; border: none; color: #00e5ff; text-align: left; padding: 0; font-family: inherit; font-size: 1rem; margin-bottom: -10px; cursor: pointer; }
+        
+        /* АЛЬФА ИИ */
+        .ai-message { background: rgba(0,0,0,0.5); padding: 12px; border-radius: 4px; font-size: 0.9rem; color: #aaa; }
+        .ai-message strong { color: #fff; }
 
-</body>
-</html>
+        /* ИНСТРУМЕНТЫ (DRAG & DROP / CLICK) */
+        .instruments-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
+        .instrument-card { 
+          min-width: 140px; background: #111b2b; border: 1px solid #00e5ff; border-radius: 8px; padding: 10px; cursor: pointer; 
+          transition: transform 0.1s;
+        }
+        .instrument-card:active { transform: scale(0.95); } /* Имитация haptic/физики[cite: 1] */
+        .instrument-card h4 { margin: 0 0 5px 0; font-size: 0.9rem; color: #00e5ff; }
+        
+        /* ЭКИПИРОВАНО */
+        .equipped-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .chip { background: #00e5ff22; border: 1px solid #00e5ff; padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; cursor: pointer; }
+        
+        /* ГЛАВНАЯ КНОПКА */
+        .btn-primary { padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-family: inherit; color: #000; cursor: pointer; font-size: 1.1rem; transition: background 0.3s; }
+        
+        /* МАРКЕРЫ POI */
+        .poi-marker { position: relative; cursor: pointer; color: #00e5ff; font-weight: bold; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 5px; border: 1px solid #00e5ff; pointer-events: auto; }
+        .pulse { position: absolute; inset: -5px; border: 2px solid #00e5ff; border-radius: 5px; animation: pulse 1.5s infinite; pointer-events: none; }
+        
+        /* ФИЗИКА (Уравнение Циолковского) */
+        .physics-panel { background: #0a0a0a; padding: 15px; border-radius: 8px; font-size: 0.95rem; }
+        .slider-label { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; color: #00e5ff; }
+        input[type=range] { width: 100%; accent-color: #00e5ff; }
+
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
+      `}</style>
+    </div>
+  );
+}
