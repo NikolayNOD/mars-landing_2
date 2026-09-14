@@ -173,9 +173,9 @@
         <div class="math-box">
             <div style="font-size:0.75rem; font-weight:bold; color:#facc15; margin-bottom:4px;">📐 Практическое задание:</div>
             <div style="font-size:0.72rem; color:#e2e8f0; margin-bottom:6px;">
-                1) Большая полуось: $a_{tr} = (1.0 + 5.2) / 2 = 3.1$ а.е.<br>
-                2) Время полета: $t = 0.5 \times (3.1)^{1.5} \approx 2.73$ года.<br>
-                <b>Вычислите угол фазы старта Земли относительно Юпитера $\theta_{start} = 180^\circ - (30.35^\circ \times t)$:</b>
+                1) Большая полуось: a_tr = (1.0 + 5.2) / 2 = 3.1 а.е.<br>
+                2) Время полета: t = 0.5 × (3.1)^1.5 ≈ 2.73 года.<br>
+                <b>Вычислите угол фазы старта Земли относительно Юпитера θ_start = 180° - (30.35° × t):</b>
             </div>
             
             <div style="display:flex; align-items:center; gap:8px;">
@@ -222,7 +222,7 @@
     <div id="stage4" class="interactive" style="display: none; flex-direction: column; justify-content: space-between; height: 100%;">
         <div class="hud-text" style="align-self: center; text-align: center;">
             <div style="color: #ef4444; font-weight: bold; font-size: 0.95rem;">ПОЯС АСТЕРОИДОВ</div>
-            <div style="font-size: 0.7rem; color: #94a3b8;">Ведите пальцем для управления кораблем</div>
+            <div style="font-size: 0.7rem; color: #94a3b8;">Ведите пальцем или мышью для управления кораблем</div>
         </div>
         <div class="hud-text" id="arcade-score" style="align-self: center; font-size: 1rem; color: #38bdf8;">ПРОГРЕСС: 0%</div>
     </div>
@@ -323,9 +323,11 @@
     function clearStage() {
         stageObjects.forEach(obj => scene.remove(obj));
         stageObjects = [];
+        asteroids = [];
         if(controls) { controls.dispose(); controls = null; }
         Object.values(zones).forEach(z => z.el.style.display = 'none');
         document.getElementById('zone-modal').style.display = 'none';
+        document.getElementById('stage1-header').style.display = 'none';
     }
 
     // --- МОДЕЛИ АППАРАТОВ ---
@@ -416,8 +418,8 @@
         });
     }
 
-    function setupStage2() { clearStage(); /* Интерфейс делает всё необходимое */ }
-    function setupStage3() { clearStage(); /* Интерфейс делает всё необходимое */ }
+    function setupStage2() { clearStage(); }
+    function setupStage3() { clearStage(); }
 
     function setupStage4() {
         clearStage();
@@ -441,7 +443,7 @@
 
     function startOrbitPhase() {
         clearStage();
-        currentStage = 'orbit'; // Отдельное состояние до посадки
+        currentStage = 'orbit';
         document.getElementById('cinematic-overlay').style.display = 'flex';
         document.getElementById('btn-deorbit').style.display = 'inline-block';
         document.getElementById('probe-attempt-num').innerText = `${currentProbeAttempt} / ${maxProbeAttempts}`;
@@ -621,7 +623,7 @@
 
             if(currentProbeAttempt < maxProbeAttempts) {
                 currentProbeAttempt++;
-                startOrbitPhase(); // Повторная посадка следующего зонда
+                startOrbitPhase();
             } else {
                 alert(`🏁 Миссия завершена!\nИтоговый научный результат: ${totalScienceScore} очков.`);
                 location.reload();
@@ -635,17 +637,25 @@
             document.removeEventListener('mousemove', window.arcadeTouchFn);
         }
 
-        // Скрываем текущий UI
-        document.getElementById(`stage${currentStage}`)?.style.setProperty('display', 'none');
-        
+        if (currentStage === 1) {
+            document.getElementById('stage1-header').style.display = 'none';
+        } else {
+            const currentEl = document.getElementById(`stage${currentStage}`);
+            if (currentEl) currentEl.style.display = 'none';
+        }
+
         if (s === 5) {
             startOrbitPhase();
             return;
         }
 
         currentStage = s;
-        const targetEl = document.getElementById(`stage${s}`);
-        if(targetEl) targetEl.style.display = (s===4 || s===5) ? 'flex' : 'block';
+        if (s === 1) {
+            document.getElementById('stage1-header').style.display = 'block';
+        } else {
+            const targetEl = document.getElementById(`stage${s}`);
+            if(targetEl) targetEl.style.display = (s===4 || s===5) ? 'flex' : 'block';
+        }
 
         if(s===1) setupStage1();
         if(s===2) setupStage2();
@@ -666,61 +676,47 @@
         }
 
         if (currentStage === 4) {
+            arcadeProgress += dt * 8;
+            document.getElementById('arcade-score').innerText = `ПРОГРЕСС: ${Math.min(100, Math.floor(arcadeProgress))}%`;
+            
             // Генерация астероидов
-            if (Math.random() < 0.1) {
-                const astGeo = new THREE.DodecahedronGeometry(Math.random() * 0.8 + 0.2, 1);
-                const astMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.9 });
-                const asteroid = new THREE.Mesh(astGeo, astMat);
-                asteroid.position.set((Math.random() - 0.5) * 30, (Math.random() - 0.5) * 20, -50);
-                
-                // Вращение астероида
-                asteroid.userData = {
-                    rx: (Math.random() - 0.5) * 2,
-                    ry: (Math.random() - 0.5) * 2
-                };
-                
-                scene.add(asteroid);
-                asteroids.push(asteroid);
-                stageObjects.push(asteroid);
+            if (Math.random() < 0.15) {
+                const astGeo = new THREE.DodecahedronGeometry(Math.random() * 0.6 + 0.3, 1);
+                const astMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.9 });
+                const ast = new THREE.Mesh(astGeo, astMat);
+                ast.position.set((Math.random() - 0.5) * 22, (Math.random() - 0.5) * 14, -30);
+                scene.add(ast);
+                stageObjects.push(ast);
+                asteroids.push(ast);
             }
 
-            // Движение и столкновения
             for (let i = asteroids.length - 1; i >= 0; i--) {
                 const ast = asteroids[i];
-                ast.position.z += dt * 35; // Скорость сближения
-                ast.rotation.x += ast.userData.rx * dt;
-                ast.rotation.y += ast.userData.ry * dt;
+                ast.position.z += dt * 25;
+                ast.rotation.x += dt;
+                ast.rotation.y += dt;
 
-                if (ast.position.distanceTo(spaceship.position) < 1.5) {
-                    alert("💥 Щиты пробиты! Вы столкнулись с астероидом. Попробуем еще раз.");
-                    setupStage4(); 
-                    return;
-                }
-
-                if (ast.position.z > 20) {
+                if (spaceship && ast.position.distanceTo(spaceship.position) < 1.4) {
+                    scene.remove(ast);
+                    asteroids.splice(i, 1);
+                    arcadeProgress = Math.max(0, arcadeProgress - 15);
+                } else if (ast.position.z > 30) {
                     scene.remove(ast);
                     asteroids.splice(i, 1);
                 }
             }
-
-            arcadeProgress += dt * 5; 
-            document.getElementById('arcade-score').innerText = `ПРОГРЕСС: ${Math.min(100, Math.round(arcadeProgress))}%`;
 
             if (arcadeProgress >= 100) {
                 nextStage(5);
             }
         }
 
-        // Вращение на орбите перед посадкой
         if (currentStage === 'orbit') {
-            if (!isDeorbiting && spaceship && callistoGlobe) {
-                orbitAngle += dt * 0.5;
-                spaceship.position.x = Math.cos(orbitAngle) * 7.5;
-                spaceship.position.z = Math.sin(orbitAngle) * 7.5;
-                spaceship.lookAt(callistoGlobe.position);
-                spaceship.rotateY(Math.PI / 2);
-                
-                callistoGlobe.rotation.y += dt * 0.05;
+            if (!isDeorbiting) {
+                orbitAngle += dt * 0.8;
+                spaceship.position.x = Math.cos(orbitAngle) * 9;
+                spaceship.position.z = Math.sin(orbitAngle) * 9;
+                spaceship.rotation.y = -orbitAngle + Math.PI / 2;
             }
         }
 
@@ -731,6 +727,5 @@
         renderer.render(scene, camera);
     }
 </script>
-
 </body>
 </html>
