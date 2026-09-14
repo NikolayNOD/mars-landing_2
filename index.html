@@ -2,122 +2,208 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Миссия Каллисто: Полный цикл</title>
+    <!-- Three.js + OrbitControls + GSAP для плавных анимаций -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; touch-action: pan-y; }
-        body { width: 100vw; height: 100vh; overflow: hidden; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #fff; }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+        body { width: 100vw; height: 100dvh; overflow: hidden; background: #030712; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #fff; }
+        
         #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; touch-action: none; }
-        .ui-layer { position: absolute; z-index: 10; width: 100%; height: 100%; pointer-events: none; padding: 15px; display: flex; flex-direction: column; }
+        
+        /* UI Layer */
+        .ui-layer { position: absolute; z-index: 10; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 16px; }
         .interactive { pointer-events: auto; }
-        .panel { background: rgba(10, 15, 30, 0.85); backdrop-filter: blur(10px); border: 1px solid #38bdf8; border-radius: 16px; padding: 15px; width: 100%; max-width: 500px; box-shadow: 0 5px 25px rgba(0,0,0,0.8); margin: auto; }
         
-        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .btn-back { background: transparent; border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
-        h1 { font-size: 1.1rem; color: #38bdf8; text-transform: uppercase; text-align: center; flex-grow: 1; }
+        /* Glassmorphism Panel */
+        .panel { 
+            background: rgba(10, 15, 30, 0.75); 
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(56, 189, 248, 0.3); 
+            border-radius: 20px; 
+            padding: 16px; 
+            width: 100%; 
+            max-width: 420px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 15px rgba(56, 189, 248, 0.1); 
+            margin: 0 auto;
+        }
         
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-        .card { background: rgba(255,255,255,0.05); border: 1px solid #334155; padding: 12px; border-radius: 8px; cursor: pointer; text-align: center; transition: 0.2s; }
-        .card.active { border-color: #38bdf8; background: rgba(56, 189, 248, 0.15); }
-        .card h3 { color: #fff; font-size: 0.9rem; margin-bottom: 4px; }
-        .card p { color: #94a3b8; font-size: 0.7rem; }
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .btn-back { background: rgba(255,255,255,0.05); border: 1px solid #38bdf8; color: #38bdf8; padding: 8px 14px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; cursor: pointer; }
+        h1 { font-size: 1rem; color: #38bdf8; letter-spacing: 1px; text-transform: uppercase; text-align: center; flex-grow: 1; text-shadow: 0 0 8px rgba(56, 189, 248, 0.5); }
         
-        .btn-main { width: 100%; padding: 14px; background: #0284c7; border: none; border-radius: 8px; color: #fff; font-weight: bold; font-size: 0.9rem; cursor: pointer; margin-top: 10px; }
-        .btn-main:active { transform: scale(0.98); background: #0369a1; }
-        .btn-danger { background: #ea580c; }
+        .grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 10px; }
+        .card { 
+            background: rgba(255,255,255,0.03); 
+            border: 1px solid rgba(255,255,255,0.1); 
+            padding: 12px 14px; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .card.active { border-color: #38bdf8; background: rgba(56, 189, 248, 0.15); box-shadow: 0 0 12px rgba(56, 189, 248, 0.3); }
+        .card h3 { color: #fff; font-size: 0.95rem; display: flex; justify-content: space-between; }
+        .card p { color: #94a3b8; font-size: 0.75rem; line-height: 1.2; }
+        .card .badge { background: #0284c7; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: bold; }
+
+        .btn-main { 
+            width: 100%; padding: 14px; 
+            background: linear-gradient(135deg, #0284c7, #0369a1); 
+            border: none; border-radius: 12px; 
+            color: #fff; font-weight: bold; font-size: 0.9rem; letter-spacing: 0.5px;
+            cursor: pointer; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
+            transition: transform 0.1s;
+        }
+        .btn-main:active { transform: scale(0.96); }
+        .btn-danger { background: linear-gradient(135deg, #ea580c, #c2410c); box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4); }
         
-        /* 3D Labels */
-        .marker { position: absolute; top: 0; left: 0; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.7); border: 1px solid #38bdf8; padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; pointer-events: auto; display: none; z-index: 15; text-align: center; }
-        .marker:hover, .marker.selected { background: rgba(56, 189, 248, 0.4); border-color: #fff; font-weight: bold; }
+        /* 3D HTML Markers */
+        .marker { 
+            position: absolute; top: 0; left: 0; 
+            background: rgba(10, 15, 30, 0.85); 
+            border: 1px solid #38bdf8; 
+            padding: 6px 12px; border-radius: 20px; 
+            font-size: 0.75rem; cursor: pointer; pointer-events: auto; 
+            display: none; z-index: 15; text-align: center;
+            box-shadow: 0 0 10px rgba(56,189,248,0.5);
+            white-space: nowrap;
+        }
+        .marker::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: #38bdf8 transparent; display: block; width: 0; }
+        .marker.selected { background: #38bdf8; color: #000; font-weight: bold; }
+        .marker.selected span { color: #1e293b !important; }
+
+        .route-builder { display: flex; gap: 6px; margin-bottom: 12px; justify-content: center; flex-wrap: wrap; }
+        .route-node { padding: 6px 10px; background: rgba(255,255,255,0.05); border: 1px solid #38bdf8; border-radius: 8px; font-size: 0.8rem; font-weight: 600; }
         
-        .route-builder { display: flex; gap: 4px; margin-bottom: 10px; justify-content: center; flex-wrap: wrap; }
-        .route-node { padding: 4px 8px; background: #1e293b; border: 1px solid #334155; border-radius: 4px; font-size: 0.8rem; cursor: pointer; }
+        .hud-text { font-family: monospace; color: #38bdf8; font-size: 0.9rem; text-shadow: 0 0 6px rgba(0,0,0,0.9); background: rgba(10,15,30,0.7); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(56,189,248,0.2); }
         
-        .hud-text { font-family: monospace; color: #38bdf8; font-size: 1rem; text-shadow: 0 0 4px #000; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; }
+        #cinematic-overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(3, 7, 18, 0.85); z-index: 20; display: none; 
+            flex-direction: column; justify-content: center; align-items: center; color: #fff; text-align: center; padding: 20px;
+        }
         
-        #cinematic-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 20; display: none; flex-direction: column; justify-content: center; align-items: center; color: #fff; }
+        /* Modal Bottom Sheet */
+        #zone-modal {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: calc(100% - 32px); max-width: 400px; z-index: 25; display: none;
+        }
     </style>
 </head>
 <body>
 
 <div id="canvas-container"></div>
 
-<!-- HTML Метки для 3D сцены (Этап 1) -->
-<div id="marker-valhalla" class="marker" onclick="selectZone3D('valhalla')">Кратер Вальхалла<br><span style="font-size:0.6rem;color:#94a3b8">Лёд: 85%</span></div>
-<div id="marker-asgard" class="marker" onclick="selectZone3D('asgard')">Равнина Асгард<br><span style="font-size:0.6rem;color:#94a3b8">Лёд: 40%</span></div>
+<!-- HTML Метки для Кратеров (Этап 1) -->
+<div id="marker-valhalla" class="marker" onclick="inspectZone('valhalla')">Кратер Вальхалла<br><span style="font-size:0.65rem;color:#94a3b8">Лёд: 85% • Рельеф: Ровный</span></div>
+<div id="marker-asgard" class="marker" onclick="inspectZone('asgard')">Равнина Асгард<br><span style="font-size:0.65rem;color:#94a3b8">Лёд: 40% • Рельеф: Скалы</span></div>
 
+<!-- Кинематографичный Оверлей -->
 <div id="cinematic-overlay">
-    <h2 style="color: #38bdf8; margin-bottom: 10px;">ВЫХОД НА ОРБИТУ КАЛЛИСТО</h2>
-    <p>Подготовка систем к посадке...</p>
+    <h2 id="orbit-status-title" style="color: #38bdf8; margin-bottom: 8px; font-size: 1.3rem;">ВЫХОД НА ОРБИТУ КАЛЛИСТО</h2>
+    <p id="orbit-status-sub" style="font-size: 0.85rem; color: #94a3b8; max-width: 280px; margin-bottom: 15px;">Выберите оптимальный момент для тормозного импульса над точкой посадки!</p>
+    <button class="btn-main interactive" id="btn-deorbit" style="max-width: 220px; display:none;" onclick="triggerDeorbitBurn()">🔥 СХОД С ОРБИТЫ</button>
+</div>
+
+<!-- Модалка детального просмотра кратера -->
+<div id="zone-modal" class="panel interactive">
+    <h3 id="modal-title" style="color:#38bdf8; margin-bottom: 6px;">Кратер Вальхалла</h3>
+    <p id="modal-desc" style="font-size: 0.8rem; color:#cbd5e1; margin-bottom: 12px;">Огромный многокольцевой бассейн. Идеален для закладки постоянной научной базы благодаря высоким запасам водяного льда.</p>
+    <div style="display:flex; gap:8px;">
+        <button class="btn-back" onclick="resetCameraStage1()">◄ Назад</button>
+        <button class="btn-main" onclick="confirmZone()">ВЫБРАТЬ ЗОНУ</button>
+    </div>
 </div>
 
 <div class="ui-layer">
     <!-- ЭТАП 1: Выбор на планете -->
-    <div id="stage1" class="panel interactive">
+    <div id="stage1-header" class="panel interactive" style="margin-top: 0;">
         <div class="header-bar">
-            <h1>1. КАРТОГРАФИЯ</h1>
+            <h1>1. КАРТОГРАФИЯ КАЛЛИСТО</h1>
         </div>
-        <p style="text-align:center; font-size: 0.8rem; color:#94a3b8; margin-bottom: 15px;">Вращайте Каллисто и нажмите на подпись кратера.</p>
-        <button class="btn-main" onclick="nextStage(2)" id="btn-confirm-zone" style="opacity: 0.5; pointer-events: none;">ВЫБЕРИТЕ ЗОНУ НА КАРТЕ</button>
+        <p style="text-align:center; font-size: 0.75rem; color:#94a3b8;">Вращайте планету и нажмите на метку кратера для детального осмотра.</p>
     </div>
 
     <!-- ЭТАП 2: Баллистика -->
-    <div id="stage2" class="panel interactive" style="display: none; background: rgba(10,15,30,0.6);">
+    <div id="stage2" class="panel interactive" style="display: none; margin-top: auto;">
         <div class="header-bar">
-            <button class="btn-back" onclick="prevStage()">◄ Назад</button>
-            <h1>2. БАЛЛИСТИКА</h1>
+            <button class="btn-back" onclick="prevStage()">◄</button>
+            <h1>2. ГРАВИТАЦИОННЫЙ МАНЁВР</h1>
         </div>
         
         <div class="route-builder" id="route-display"><div class="route-node">Земля</div></div>
         
-        <div class="grid">
-            <div class="card" onclick="addNode('Венера')"><h3>+ Венера</h3></div>
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="card" onclick="addNode('Венера')"><h3>+ Венера <span class="badge">VEEGA</span></h3></div>
             <div class="card" onclick="addNode('Земля')"><h3>+ Земля</h3></div>
             <div class="card" onclick="addNode('Марс')"><h3>+ Марс</h3></div>
             <div class="card" onclick="addNode('Юпитер')"><h3>➔ Юпитер</h3></div>
         </div>
         
-        <div id="route-feedback" style="text-align:center; font-size:0.85rem; margin: 10px 0; min-height: 40px; color: #cbd5e1;">Добавьте планеты для манёвра. Обязательная конечная точка — Юпитер.</div>
+        <div id="route-feedback" style="text-align:center; font-size:0.75rem; margin: 8px 0; min-height: 36px; color: #cbd5e1;">Составьте цепочку пролётов. Финиш — Юпитер.</div>
         
-        <div style="display: flex; gap: 10px;">
-            <button class="btn-main" style="background: #334155;" onclick="resetRoute()">СБРОС</button>
-            <button class="btn-main" onclick="checkRouteAndProceed()">ДАЛЕЕ</button>
+        <div style="display: flex; gap: 8px;">
+            <button class="btn-main" style="background: rgba(255,255,255,0.1); width: 35%;" onclick="resetRoute()">СБРОС</button>
+            <button class="btn-main" style="width: 65%;" onclick="checkRouteAndProceed()">ДАЛЕЕ ►</button>
         </div>
     </div>
 
-    <!-- ЭТАП 3: Ракеты -->
-    <div id="stage3" class="panel interactive" style="display: none;">
+    <!-- ЭТАП 3: Ракеты (БЕЗ 3D МОДЕЛИ, ТОЛЬКО ТЕХ-КАРТОЧКИ) -->
+    <div id="stage3" class="panel interactive" style="display: none; margin: auto 0 0 0;">
         <div class="header-bar">
-            <button class="btn-back" onclick="prevStage()">◄ Назад</button>
+            <button class="btn-back" onclick="prevStage()">◄</button>
             <h1>3. РАКЕТА-НОСИТЕЛЬ</h1>
         </div>
+        
         <div class="grid">
-            <div class="card active" onclick="selectRocket(this)"><h3>Союз-2.1б</h3><p>До 8т</p></div>
-            <div class="card" onclick="selectRocket(this)"><h3>Ангара-А5</h3><p>До 24т</p></div>
-            <div class="card" onclick="selectRocket(this)"><h3>Енисей</h3><p>До 115т</p></div>
+            <div class="card" onclick="selectRocket(this, 'medium')">
+                <h3>Союз-2.1б <span class="badge" style="background:#ef4444">Средний</span></h3>
+                <p>ПН до Юпитера: ~1.5т. Недостаточно для пилотируемого модуля.</p>
+            </div>
+            <div class="card" onclick="selectRocket(this, 'heavy')">
+                <h3>Ангара-А5 <span class="badge" style="background:#facc15; color:#000;">Тяжёлый</span></h3>
+                <p>ПН до Юпитера: ~4.5т. Требуется сложная гравитационная петля.</p>
+            </div>
+            <div class="card active" onclick="selectRocket(this, 'superheavy')">
+                <h3>Енисей / Сверхтяж <span class="badge" style="background:#22c55e">Сверхтяж</span></h3>
+                <p>ПН до Юпитера: ~27т. Идеальный запас топлива и полезной нагрузки.</p>
+            </div>
         </div>
-        <button class="btn-main" onclick="nextStage(4)">ЗАПУСК</button>
+        <button class="btn-main" onclick="nextStage(4)">🚀 СТАРТ МИССИИ</button>
     </div>
 
-    <!-- ЭТАП 4: Аркада -->
-    <div id="stage4" class="panel interactive" style="display: none; background: transparent; border: none; box-shadow: none; margin-top:0;">
-        <h1 style="font-size: 1.5rem; color: #ef4444; text-shadow: 0 0 10px #000;">АСТЕРОИДЫ</h1>
-        <p class="hud-text" style="text-align:center; font-size: 0.8rem;">ТАП/МЫШЬ по экрану — управление<br>Уклоняйтесь!</p>
-        <div class="hud-text" id="arcade-score" style="text-align:center; margin-top:10px;">ПРОГРЕСС: 0%</div>
+    <!-- ЭТАП 4: Аркада (Управление полётом) -->
+    <div id="stage4" class="interactive" style="display: none; flex-direction: column; justify-content: space-between; height: 100%;">
+        <div class="hud-text" style="align-self: center; text-align: center;">
+            <div style="color: #ef4444; font-weight: bold; font-size: 1rem;">ПОЯС АСТЕРОИДОВ</div>
+            <div style="font-size: 0.7rem; color: #94a3b8;">Удерживайте и ведите пальцем по экрану</div>
+        </div>
+        <div class="hud-text" id="arcade-score" style="align-self: center; font-size: 1.1rem; color: #38bdf8;">ПРОГРЕСС: 0%</div>
     </div>
 
     <!-- ЭТАП 5: Посадка -->
-    <div id="stage5" class="panel interactive" style="display: none; background: transparent; border: none; box-shadow: none; margin-bottom: 10px; max-width: 600px;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+    <div id="stage5" class="interactive" style="display: none; flex-direction: column; justify-content: space-between; height: 100%;">
+        <div style="display: flex; justify-content: space-between; width: 100%;">
             <div class="hud-text" id="alt-txt">ВЫСОТА: 8000 м</div>
-            <div class="hud-text" id="v-txt">V-ВЕРТ: -80 м/с</div>
+            <div class="hud-text" id="v-txt">V-ВЕРТ: -50 м/с</div>
         </div>
-        <div style="display: flex; gap: 8px;">
-            <button class="btn-main" style="background:#334155;" onmousedown="ctrl.left=true" onmouseup="ctrl.left=false" ontouchstart="ctrl.left=true; event.preventDefault();" ontouchend="ctrl.left=false">◄ ЛЕВО</button>
-            <button class="btn-main btn-danger" onmousedown="ctrl.up=true" onmouseup="ctrl.up=false" ontouchstart="ctrl.up=true; event.preventDefault();" ontouchend="ctrl.up=false">🔥 ТЯГА</button>
-            <button class="btn-main" style="background:#334155;" onmousedown="ctrl.right=true" onmouseup="ctrl.right=false" ontouchstart="ctrl.right=true; event.preventDefault();" ontouchend="ctrl.right=false">ПРАВО ►</button>
+        
+        <div style="display: flex; gap: 8px; width: 100%; max-width: 420px; margin: 0 auto 10px auto;">
+            <button class="btn-main" style="background: rgba(15, 23, 42, 0.8); border: 1px solid #38bdf8;" 
+                    ontouchstart="ctrl.left=true; event.preventDefault();" ontouchend="ctrl.left=false"
+                    onmousedown="ctrl.left=true" onmouseup="ctrl.left=false">◄ ЛЕВО</button>
+            <button class="btn-main btn-danger" style="flex-grow: 1.5;" 
+                    ontouchstart="ctrl.up=true; event.preventDefault();" ontouchend="ctrl.up=false"
+                    onmousedown="ctrl.up=true" onmouseup="ctrl.up=false">🔥 ТЯГА</button>
+            <button class="btn-main" style="background: rgba(15, 23, 42, 0.8); border: 1px solid #38bdf8;" 
+                    ontouchstart="ctrl.right=true; event.preventDefault();" ontouchend="ctrl.right=false"
+                    onmousedown="ctrl.right=true" onmouseup="ctrl.right=false">ПРАВО ►</button>
         </div>
     </div>
 </div>
@@ -127,154 +213,275 @@
     let currentStage = 1;
     let stageObjects = [];
     
+    // Состояние
+    let selectedZoneData = null;
+    let selectedRocketType = 'superheavy';
+    let route = ['Земля'];
+    
+    // Этап 1: Зоны на Каллисто
+    const zones = {
+        'valhalla': { id: 'valhalla', name: 'Кратер Вальхалла', desc: 'Крупнейший многокольцевой кратер. Огромные запасы подповерхностного льда и ровные площадки.', lat: 18, lng: 55, el: document.getElementById('marker-valhalla') },
+        'asgard': { id: 'asgard', name: 'Равнина Асгард', desc: 'Древняя куполообразная структура. Средний уровень льда, сложный рельеф с каньонами.', lat: -26, lng: -140, el: document.getElementById('marker-asgard') }
+    };
+
+    // Объекты сцены
+    let callistoGlobe, spaceship, lander, landerFlame;
+    let asteroids = [], arcadeProgress = 0;
+    let alt = 8000, vY = -50, vX = 0, posX = 0;
+    let ctrl = { up: false, left: false, right: false };
+    let orbitAngle = 0, isDeorbiting = false;
+
     // Текстуры
     const txLoader = new THREE.TextureLoader();
     const txCallisto = txLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/moon_1024.jpg');
-    
-    // Состояние
-    let selectedZone = null;
-    let route = ['Земля'];
-    let markers = [];
-    
-    // Аркада и посадка
-    let ship, asteroids = [], arcadeProgress = 0;
-    let lander, landerGround, targetPad;
-    let alt = 8000, vY = -60, vX = 0, posX = 0;
-    let ctrl = { up: false, left: false, right: false };
-    let orbitCamAngle = 0;
 
     init();
     animate();
 
     function init() {
         scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 10000);
-        renderer = new THREE.WebGLRenderer({ antialias: true });
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.getElementById('canvas-container').appendChild(renderer.domElement);
         clock = new THREE.Clock();
 
-        scene.add(new THREE.AmbientLight(0x222222));
-        const light = new THREE.DirectionalLight(0xffffff, 1.2);
-        light.position.set(50, 20, 30);
-        scene.add(light);
+        // Освещение
+        scene.add(new THREE.AmbientLight(0x333344, 1.5));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        dirLight.position.set(100, 40, 50);
+        scene.add(dirLight);
 
-        // Звезды
-        const stars = new THREE.BufferGeometry();
-        const pts = [];
-        for(let i=0; i<2000; i++) pts.push((Math.random()-0.5)*1500, (Math.random()-0.5)*1500, (Math.random()-0.5)*1500);
-        stars.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-        scene.add(new THREE.Points(stars, new THREE.PointsMaterial({color: 0xffffff, size: 1.5})));
+        // Звёздный фон
+        const starGeo = new THREE.BufferGeometry();
+        const starPts = [];
+        for(let i=0; i<2500; i++) starPts.push((Math.random()-0.5)*1200, (Math.random()-0.5)*1200, (Math.random()-0.5)*1200);
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPts, 3));
+        scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0x88ccff, size: 1.2})));
 
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth/window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
+        window.addEventListener('resize', onWindowResize);
         setupStage1();
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
     function clearStage() {
         stageObjects.forEach(obj => scene.remove(obj));
         stageObjects = [];
         if(controls) { controls.dispose(); controls = null; }
-        document.getElementById('marker-valhalla').style.display = 'none';
-        document.getElementById('marker-asgard').style.display = 'none';
+        Object.values(zones).forEach(z => z.el.style.display = 'none');
+        document.getElementById('zone-modal').style.display = 'none';
+    }
+
+    // --- ВСПОМОГАТЕЛЬНЫЕ 3D МОДЕЛИ ---
+    // Создаем красивый детализированный космический аппарат
+    function createSpaceship() {
+        const ship = new THREE.Group();
+        
+        // Корпус
+        const body = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.6, 0.8, 2.5, 8),
+            new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.8, roughness: 0.2 })
+        );
+        body.rotation.x = Math.PI / 2;
+        ship.add(body);
+
+        // Золотая тарелка связи
+        const dish = new THREE.Mesh(
+            new THREE.ConeGeometry(0.9, 0.3, 16),
+            new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9, roughness: 0.1 })
+        );
+        dish.position.set(0, 0, 1.4);
+        dish.rotation.x = -Math.PI / 2;
+        ship.add(dish);
+
+        // Солнечные панели
+        const panelMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.5, roughness: 0.1 });
+        const p1 = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.05, 0.8), panelMat);
+        ship.add(p1);
+
+        // Сопло двигателя и пламя
+        const flame = new THREE.Mesh(
+            new THREE.ConeGeometry(0.4, 1.2, 12),
+            new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.8 })
+        );
+        flame.position.set(0, 0, -1.8);
+        flame.rotation.x = Math.PI / 2;
+        flame.name = "flame";
+        ship.add(flame);
+
+        return ship;
+    }
+
+    // Создаем посадочную капсулу
+    function createLanderModule() {
+        const group = new THREE.Group();
+        
+        // Посадочный модуль (золотой фольгированный)
+        const base = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.2, 1.5, 1.0, 8),
+            new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.2 })
+        );
+        group.add(base);
+
+        // Взлетная/капсульная часть
+        const cap = new THREE.Mesh(
+            new THREE.SphereGeometry(0.9, 16, 12, 0, Math.PI*2, 0, Math.PI*0.7),
+            new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.2, roughness: 0.3 })
+        );
+        cap.position.y = 0.6;
+        group.add(cap);
+
+        // Опоры (4 ножки)
+        for(let i=0; i<4; i++) {
+            const angle = (i/4) * Math.PI * 2;
+            const leg = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.06, 0.06, 1.8),
+                new THREE.MeshStandardMaterial({ color: 0x64748b })
+            );
+            leg.position.set(Math.cos(angle)*1.2, -0.6, Math.sin(angle)*1.2);
+            leg.rotation.z = Math.cos(angle) * 0.4;
+            leg.rotation.x = -Math.sin(angle) * 0.4;
+            group.add(leg);
+        }
+
+        // Пламя реактивной тяги
+        landerFlame = new THREE.Mesh(
+            new THREE.ConeGeometry(0.5, 2.0, 12),
+            new THREE.MeshBasicMaterial({ color: 0xea580c, transparent: true, opacity: 0.9 })
+        );
+        landerFlame.position.y = -1.5;
+        landerFlame.rotation.x = Math.PI;
+        landerFlame.visible = false;
+        group.add(landerFlame);
+
+        return group;
     }
 
     // --- ЭТАП 1: 3D Картография ---
     function setupStage1() {
         clearStage();
-        camera.position.set(0, 0, 15);
-        camera.lookAt(0,0,0);
-        
+        document.getElementById('stage1-header').style.display = 'block';
+
+        camera.position.set(0, 0, 14);
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enablePan = false;
-        controls.minDistance = 6; controls.maxDistance = 25;
+        controls.minDistance = 7; controls.maxDistance = 20;
+        controls.rotateSpeed = 0.6;
 
-        const planet = new THREE.Mesh(
+        callistoGlobe = new THREE.Mesh(
             new THREE.SphereGeometry(5, 64, 64),
-            new THREE.MeshStandardMaterial({ map: txCallisto, bumpMap: txCallisto, bumpScale: 0.2, roughness: 0.7 })
+            new THREE.MeshStandardMaterial({ map: txCallisto, bumpMap: txCallisto, bumpScale: 0.15, roughness: 0.8 })
         );
-        scene.add(planet);
-        stageObjects.push(planet);
+        scene.add(callistoGlobe);
+        stageObjects.push(callistoGlobe);
 
-        // Координаты кратеров на сфере
-        markers = [
-            { id: 'valhalla', pos: new THREE.Vector3(2, 2, 4.1).normalize().multiplyScalar(5.1), el: document.getElementById('marker-valhalla') },
-            { id: 'asgard', pos: new THREE.Vector3(-3, -1, 3.8).normalize().multiplyScalar(5.1), el: document.getElementById('marker-asgard') }
-        ];
-        markers.forEach(m => m.el.style.display = 'block');
+        // Расчет 3D точек для меток на сфере
+        Object.values(zones).forEach(z => {
+            const phi = (90 - z.lat) * (Math.PI / 180);
+            const theta = (z.lng + 180) * (Math.PI / 180);
+            z.pos3D = new THREE.Vector3(
+                -(5.05 * Math.sin(phi) * Math.cos(theta)),
+                (5.05 * Math.cos(phi)),
+                (5.05 * Math.sin(phi) * Math.sin(theta))
+            );
+        });
     }
 
-    window.selectZone3D = (zoneId) => {
-        selectedZone = zoneId;
-        markers.forEach(m => m.el.classList.toggle('selected', m.id === zoneId));
-        const btn = document.getElementById('btn-confirm-zone');
-        btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; btn.innerText = "ПОДТВЕРДИТЬ КООРДИНАТЫ";
-    };
+    function inspectZone(zoneId) {
+        selectedZoneData = zones[zoneId];
+        
+        // Плавный подлет камеры к выбранному кратеру (GSAP)
+        const targetCamPos = selectedZoneData.pos3D.clone().multiplyScalar(1.8);
+        gsap.to(camera.position, {
+            x: targetCamPos.x, y: targetCamPos.y, z: targetCamPos.z,
+            duration: 1.2, ease: "power2.inOut",
+            onUpdate: () => controls.update()
+        });
 
-    function updateMarkers() {
-        markers.forEach(m => {
-            if(m.el.style.display === 'none') return;
-            const vec = m.pos.clone();
-            vec.project(camera);
+        document.getElementById('modal-title').innerText = selectedZoneData.name;
+        document.getElementById('modal-desc').innerText = selectedZoneData.desc;
+        document.getElementById('zone-modal').style.display = 'block';
+    }
+
+    function resetCameraStage1() {
+        document.getElementById('zone-modal').style.display = 'none';
+        gsap.to(camera.position, { x: 0, y: 0, z: 14, duration: 1.0, ease: "power2.out" });
+    }
+
+    function confirmZone() {
+        nextStage(2);
+    }
+
+    // ИСПРАВЛЕНО: Обновление меток при вращении (всегда работают)
+    function updateMarkersStage1() {
+        if (currentStage !== 1) return;
+        
+        Object.values(zones).forEach(z => {
+            const wp = z.pos3D.clone().applyMatrix4(callistoGlobe.matrixWorld);
             
-            // Проверка, находится ли точка на видимой стороне сферы
-            const dot = camera.position.clone().normalize().dot(m.pos.clone().normalize());
-            if(dot > 0.1 && vec.z < 1) {
-                m.el.style.display = 'block';
-                m.el.style.left = `${(vec.x * 0.5 + 0.5) * window.innerWidth}px`;
-                m.el.style.top = `${(vec.y * -0.5 + 0.5) * window.innerHeight}px`;
+            // Проверка: находится ли точка на лицевой стороне планеты
+            const camDir = camera.position.clone().sub(wp).normalize();
+            const normal = wp.clone().normalize();
+            const dot = camDir.dot(normal);
+
+            if (dot > 0.15) { // Видимая сторона
+                const sp = wp.clone().project(camera);
+                const x = (sp.x * 0.5 + 0.5) * window.innerWidth;
+                const y = (-sp.y * 0.5 + 0.5) * window.innerHeight;
+                z.el.style.display = 'block';
+                z.el.style.left = `${x}px`;
+                z.el.style.top = `${y}px`;
             } else {
-                m.el.style.display = 'none';
+                z.el.style.display = 'none';
             }
         });
     }
 
-    // --- ЭТАП 2: Баллистика и Орбиты ---
+    // --- ЭТАП 2: Баллистика ---
     function setupStage2() {
         clearStage();
-        camera.position.set(0, 30, 40);
-        camera.lookAt(0,0,0);
+        document.getElementById('stage1-header').style.display = 'none';
+        
+        camera.position.set(0, 35, 35);
+        camera.lookAt(0, 0, 0);
 
-        const sun = new THREE.Mesh(new THREE.SphereGeometry(2, 32, 32), new THREE.MeshBasicMaterial({color: 0xffcc00}));
-        scene.add(sun);
-        stageObjects.push(sun);
+        const sun = new THREE.Mesh(new THREE.SphereGeometry(2.5, 32, 32), new THREE.MeshBasicMaterial({color: 0xfacc15}));
+        scene.add(sun); stageObjects.push(sun);
 
         const createOrbit = (r, color) => {
-            const geom = new THREE.BufferGeometry();
             const pts = [];
             for(let i=0; i<=64; i++) {
                 const a = (i/64) * Math.PI*2;
                 pts.push(new THREE.Vector3(Math.cos(a)*r, 0, Math.sin(a)*r));
             }
-            geom.setFromPoints(pts);
-            const line = new THREE.Line(geom, new THREE.LineBasicMaterial({color: color, transparent: true, opacity: 0.3}));
-            scene.add(line);
-            stageObjects.push(line);
-            
-            const planet = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), new THREE.MeshStandardMaterial({color: color}));
-            scene.add(planet);
-            stageObjects.push(planet);
-            return { mesh: planet, r: r, angle: Math.random()*Math.PI*2, speed: 10/r };
+            const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({color: color, transparent: true, opacity: 0.25}));
+            scene.add(line); stageObjects.push(line);
+
+            const pMesh = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), new THREE.MeshStandardMaterial({color: color}));
+            scene.add(pMesh); stageObjects.push(pMesh);
+            return { mesh: pMesh, r: r, angle: Math.random()*6, speed: 8/r };
         };
 
         window.planets3D = {
             'Венера': createOrbit(7, 0xeab308),
             'Земля': createOrbit(12, 0x38bdf8),
             'Марс': createOrbit(17, 0xef4444),
-            'Юпитер': createOrbit(28, 0xd97706)
+            'Юпитер': createOrbit(27, 0xd97706)
         };
-        
-        window.trajLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color: 0xffffff, linewidth: 2}));
-        scene.add(window.trajLine);
-        stageObjects.push(window.trajLine);
+
+        // Траектория полёта (3D кривая)
+        window.trajLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({color: 0x38bdf8, dashSize: 0.5, gapSize: 0.2}));
+        scene.add(window.trajLine); stageObjects.push(window.trajLine);
     }
 
     window.addNode = (p) => {
-        if(route.length > 4) return;
+        if(route.length >= 5 || route[route.length-1] === 'Юпитер') return;
         route.push(p);
         document.getElementById('route-display').innerHTML = route.map(r => `<div class="route-node">${r}</div>`).join(' ➔ ');
         evaluateRoute();
@@ -283,196 +490,200 @@
     window.resetRoute = () => {
         route = ['Земля'];
         document.getElementById('route-display').innerHTML = '<div class="route-node">Земля</div>';
-        document.getElementById('route-feedback').innerText = 'Добавьте планеты для манёвра.';
+        document.getElementById('route-feedback').innerText = 'Составьте цепочку пролётов. Финиш — Юпитер.';
         document.getElementById('route-feedback').style.color = '#cbd5e1';
     };
 
     function evaluateRoute() {
         const path = route.join('-');
         const fb = document.getElementById('route-feedback');
-        
-        let time = 0;
-        if(path === "Земля-Венера-Земля-Юпитер") { fb.innerText = "Идеально! Окно VEEGA. Время: ~3 года. Расход топлива минимален."; fb.style.color = "#4ade80"; }
-        else if (path === "Земля-Марс-Юпитер") { fb.innerText = "Допустимо, но гравитация Марса слабая. Время: ~4.5 года."; fb.style.color = "#facc15"; }
-        else if (route[route.length-1] === "Юпитер") { fb.innerText = "Маршрут построен, но траектория требует мощной ракеты. Время: ~5+ лет."; fb.style.color = "#fb923c"; }
-        else { fb.innerText = "Продолжайте строить маршрут. Конечная цель — Юпитер."; fb.style.color = "#cbd5e1"; }
+        if(path === "Земля-Венера-Земля-Юпитер") { fb.innerText = "🌟 Идеально! Манёвр VEEGA. Минимальный расход топлива."; fb.style.color = "#4ade80"; }
+        else if (path === "Земля-Марс-Юпитер") { fb.innerText = "⚡ Допустимо. Потребуется средний запас ракетного топлива."; fb.style.color = "#facc15"; }
+        else if (route[route.length-1] === "Юпитер") { fb.innerText = "🚀 Прямой перелёт/Неоптимально. Нужна сверхтяжёлая ракета!"; fb.style.color = "#fb923c"; }
+        else { fb.innerText = "Продолжайте строить траекторию до Юпитера."; fb.style.color = "#cbd5e1"; }
     }
 
     window.checkRouteAndProceed = () => {
-        if(route[route.length-1] !== 'Юпитер') {
-            alert("Конечной точкой маршрута должен быть Юпитер!"); return;
-        }
+        if(route[route.length-1] !== 'Юпитер') { alert("Конечная точка должна быть Юпитером!"); return; }
         nextStage(3);
     };
 
-    // --- ЭТАП 3: Ракета ---
+    // --- ЭТАП 3: Выбор Ракеты ---
     function setupStage3() {
         clearStage();
-        camera.position.set(0, 0, 20);
-        camera.lookAt(0,0,0);
-        const rocket = new THREE.Group();
-        const core = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.5, 12, 16), new THREE.MeshStandardMaterial({color: 0xe2e8f0}));
-        rocket.add(core);
-        scene.add(rocket);
-        stageObjects.push(rocket);
-        window.rocketModel = rocket;
+        // 3D Модель ракеты УБРАНА по требованию пользователя.
     }
-    
-    window.selectRocket = (el) => {
+
+    window.selectRocket = (el, type) => {
         document.querySelectorAll('#stage3 .card').forEach(c => c.classList.remove('active'));
         el.classList.add('active');
+        selectedRocketType = type;
     };
 
-    // --- ЭТАП 4: Аркада ---
+    // --- ЭТАП 4: Аркадный полёт через астероиды ---
     function setupStage4() {
         clearStage();
-        camera.position.set(0, 0, 50);
-        camera.lookAt(0,0,0);
-        
-        ship = new THREE.Mesh(new THREE.ConeGeometry(1, 3, 16), new THREE.MeshStandardMaterial({color: 0x38bdf8}));
-        ship.rotation.x = Math.PI / 2;
-        scene.add(ship);
-        stageObjects.push(ship);
-        
-        // Touch/Mouse controls for arcade
-        const moveShip = (e) => {
+        camera.position.set(0, 5, 25);
+        camera.lookAt(0, 0, 0);
+
+        spaceship = createSpaceship();
+        scene.add(spaceship); stageObjects.push(spaceship);
+
+        asteroids = [];
+        arcadeProgress = 0;
+
+        // Сенсорное управление полётом пальцем
+        const handleTouch = (e) => {
             if(currentStage !== 4) return;
-            let cx = e.touches ? e.touches[0].clientX : e.clientX;
-            let cy = e.touches ? e.touches[0].clientY : e.clientY;
-            ship.position.x = (cx / window.innerWidth) * 40 - 20;
-            ship.position.y = -(cy / window.innerHeight) * 30 + 15;
+            const t = e.touches ? e.touches[0] : e;
+            const x = (t.clientX / window.innerWidth) * 2 - 1;
+            const y = -(t.clientY / window.innerHeight) * 2 + 1;
+            gsap.to(spaceship.position, { x: x * 14, y: y * 8, duration: 0.2 });
         };
-        document.addEventListener('mousemove', moveShip);
-        document.addEventListener('touchmove', moveShip, {passive: false});
-        window.arcadeMoveFn = moveShip;
+        document.addEventListener('touchmove', handleTouch);
+        document.addEventListener('mousemove', handleTouch);
+        window.arcadeTouchFn = handleTouch;
     }
 
-    // --- ЭТАП 4.5: Орбитальная Анимация ---
-    function playOrbitAnimation(callback) {
+    // --- ЭТАП 5: Посадка (Орбитальный маневр + Спуск) ---
+    function startOrbitPhase() {
         clearStage();
         document.getElementById('cinematic-overlay').style.display = 'flex';
-        camera.position.set(0, 0, 20);
-        camera.lookAt(0,0,0);
+        document.getElementById('btn-deorbit').style.display = 'inline-block';
         
-        const callisto = new THREE.Mesh(
-            new THREE.SphereGeometry(8, 64, 64),
+        camera.position.set(0, 0, 18);
+
+        callistoGlobe = new THREE.Mesh(
+            new THREE.SphereGeometry(6, 48, 48),
             new THREE.MeshStandardMaterial({ map: txCallisto, bumpMap: txCallisto, bumpScale: 0.2 })
         );
-        scene.add(callisto);
-        stageObjects.push(callisto);
-        
-        orbitCamAngle = 0;
-        window.isOrbiting = true;
-        
-        setTimeout(() => {
-            window.isOrbiting = false;
-            document.getElementById('cinematic-overlay').style.display = 'none';
-            callback();
-        }, 4000);
+        scene.add(callistoGlobe); stageObjects.push(callistoGlobe);
+
+        spaceship = createSpaceship();
+        spaceship.scale.set(0.4, 0.4, 0.4);
+        scene.add(spaceship); stageObjects.push(spaceship);
+
+        orbitAngle = 0;
+        isDeorbiting = false;
     }
 
-    // --- ЭТАП 5: Посадка ---
-    function setupStage5() {
+    window.triggerDeorbitBurn = () => {
+        isDeorbiting = true;
+        document.getElementById('orbit-status-title').innerText = "ТОРМОЗНОЙ ИМПУЛЬС!";
+        document.getElementById('orbit-status-sub').innerText = "Сход с орбиты начат. Вход в атмосферу...";
+        document.getElementById('btn-deorbit').style.display = 'none';
+
+        gsap.to(spaceship.position, {
+            x: 0, y: 0, z: 6, duration: 2.0,
+            onComplete: () => {
+                document.getElementById('cinematic-overlay').style.display = 'none';
+                setupLandingPhase();
+            }
+        });
+    }
+
+    function setupLandingPhase() {
         clearStage();
-        camera.position.set(0, 10, 40);
-        
-        landerGround = new THREE.Mesh(
-            new THREE.PlaneGeometry(2000, 2000, 32, 32),
-            new THREE.MeshStandardMaterial({map: txCallisto, bumpMap: txCallisto, bumpScale: 5})
-        );
-        landerGround.rotation.x = -Math.PI / 2;
-        landerGround.position.y = -5;
-        scene.add(landerGround);
-        
-        targetPad = new THREE.Mesh(new THREE.RingGeometry(5, 8, 32), new THREE.MeshBasicMaterial({color: 0x38bdf8}));
-        targetPad.rotation.x = -Math.PI / 2;
-        targetPad.position.y = -4.8;
-        scene.add(targetPad);
+        currentStage = 5;
+        document.getElementById('stage5').style.display = 'flex';
 
-        lander = new THREE.Group();
-        lander.add(new THREE.Mesh(new THREE.CylinderGeometry(1.5, 2, 3, 16), new THREE.MeshStandardMaterial({color: 0xcccccc})));
-        scene.add(lander);
-        
-        stageObjects.push(landerGround, targetPad, lander);
-        
-        // Сброс параметров
-        alt = 8000; vY = -50; vX = 0; posX = 0;
+        camera.position.set(0, 8, 25);
+
+        // Поверхность Каллисто
+        const ground = new THREE.Mesh(
+            new THREE.PlaneGeometry(1000, 1000, 32, 32),
+            new THREE.MeshStandardMaterial({ map: txCallisto, bumpMap: txCallisto, bumpScale: 2 })
+        );
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -2;
+        scene.add(ground); stageObjects.push(ground);
+
+        // Посадочная площадка
+        const pad = new THREE.Mesh(
+            new THREE.RingGeometry(3, 5, 32),
+            new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide })
+        );
+        pad.rotation.x = -Math.PI / 2;
+        pad.position.set(0, -1.9, 0);
+        scene.add(pad); stageObjects.push(pad);
+
+        lander = createLanderModule();
+        scene.add(lander); stageObjects.push(lander);
+
+        alt = 8000; vY = -40; vX = 0; posX = 0;
     }
 
-    function updateLanding(dt) {
-        const gravity = -0.8; // Замедленная гравитация для удобства игры
-        const thrustY = ctrl.up ? 2.5 : 0;
-        const thrustX = (ctrl.left ? -1.5 : 0) + (ctrl.right ? 1.5 : 0);
+    function updateLandingPhysics(dt) {
+        const gravity = -0.9;
+        const thrustY = ctrl.up ? 2.8 : 0;
+        const thrustX = (ctrl.left ? -1.2 : 0) + (ctrl.right ? 1.2 : 0);
+
+        landerFlame.visible = ctrl.up;
 
         vY += (gravity + thrustY) * dt * 10;
         vX += thrustX * dt * 10;
         
-        alt += vY * dt * 5;
-        posX += vX * dt * 5;
+        alt += vY * dt * 6;
+        posX += vX * dt * 6;
 
-        lander.position.y = alt / 100;
-        lander.position.x = posX / 10;
-        lander.rotation.z = -vX * 0.05;
+        lander.position.y = Math.max(0, alt / 250);
+        lander.position.x = posX / 20;
+        lander.rotation.z = -vX * 0.03;
 
         camera.position.x = lander.position.x;
-        camera.position.y = lander.position.y + 15;
-        camera.lookAt(lander.position.x, 0, 0);
+        camera.position.y = lander.position.y + 6;
+        camera.lookAt(lander.position.x, lander.position.y, 0);
 
         document.getElementById('alt-txt').innerText = `ВЫСОТА: ${Math.max(0, Math.round(alt))} м`;
         document.getElementById('v-txt').innerText = `V-ВЕРТ: ${Math.round(vY)} м/с`;
-        
-        document.getElementById('v-txt').style.color = (vY < -15) ? "#ef4444" : "#4ade80";
+        document.getElementById('v-txt').style.color = (vY < -18) ? "#ef4444" : "#4ade80";
 
         if(alt <= 0) {
             alt = 0;
-            if(vY < -15 || Math.abs(posX) > 80) {
-                alert("АВАРИЯ! Превышена скорость касания или промах мимо цели. Попробуйте еще раз.");
-                setupStage5(); // Рестарт посадки
+            if(vY < -18 || Math.abs(posX) > 60) {
+                alert("💥 АВАРИЯ! Слишком высокая скорость касания или промах мимо площадки.");
+                setupLandingPhase();
             } else {
-                alert("УСПЕШНАЯ МЯГКАЯ ПОСАДКА! Миссия выполнена.");
+                alert("🎉 УСПЕШНАЯ ПОСАДКА! База на Каллисто основана!");
                 location.reload();
             }
         }
     }
 
-    // --- Управление Потоком ---
+    // --- Переключение Этапов ---
     window.nextStage = (s) => {
-        if(currentStage === 4 && window.arcadeMoveFn) {
-            document.removeEventListener('mousemove', window.arcadeMoveFn);
-            document.removeEventListener('touchmove', window.arcadeMoveFn);
+        if(currentStage === 4 && window.arcadeTouchFn) {
+            document.removeEventListener('touchmove', window.arcadeTouchFn);
+            document.removeEventListener('mousemove', window.arcadeTouchFn);
         }
-        
-        document.getElementById(`stage${currentStage}`).style.display = 'none';
+
+        document.getElementById(`stage${currentStage}`)?.style.setProperty('display', 'none');
         
         if (s === 5) {
-            playOrbitAnimation(() => {
-                currentStage = 5;
-                document.getElementById('stage5').style.display = 'block';
-                setupStage5();
-            });
+            startOrbitPhase();
             return;
         }
 
         currentStage = s;
-        document.getElementById(`stage${s}`).style.display = (s===4 || s===5) ? 'flex' : 'block';
-        
+        const targetEl = document.getElementById(`stage${s}`);
+        if(targetEl) targetEl.style.display = (s===4 || s===5) ? 'flex' : 'block';
+
         if(s===1) setupStage1();
         if(s===2) setupStage2();
         if(s===3) setupStage3();
         if(s===4) setupStage4();
     };
 
-    window.prevStage = () => {
-        if(currentStage > 1) nextStage(currentStage - 1);
-    };
+    window.prevStage = () => { if(currentStage > 1) nextStage(currentStage - 1); };
 
+    // --- Главный Цикл Анимации ---
     function animate() {
         requestAnimationFrame(animate);
         const dt = clock.getDelta();
 
         if(currentStage === 1) {
             if(controls) controls.update();
-            updateMarkers();
+            updateMarkersStage1();
         }
 
         if(currentStage === 2 && window.planets3D) {
@@ -482,44 +693,46 @@
                 p.mesh.position.set(Math.cos(p.angle)*p.r, 0, Math.sin(p.angle)*p.r);
                 if(route.includes(name)) pts.push(p.mesh.position.clone());
             }
-            if(pts.length > 0) {
-                window.trajLine.geometry.setFromPoints(pts);
+            if(pts.length >= 2) {
+                const curve = new THREE.CatmullRomCurve3(pts);
+                window.trajLine.geometry.dispose();
+                window.trajLine.geometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(50));
             }
-        }
-
-        if(currentStage === 3 && window.rocketModel) {
-            window.rocketModel.rotation.y += dt;
         }
 
         if(currentStage === 4) {
-            if(Math.random() < 0.08) {
-                const ast = new THREE.Mesh(new THREE.DodecahedronGeometry(1 + Math.random()*1.5), new THREE.MeshStandardMaterial({color: 0x475569}));
-                ast.position.set((Math.random()-0.5)*50, (Math.random()-0.5)*40, -80);
+            // Спавн астероидов
+            if(Math.random() < 0.1) {
+                const ast = new THREE.Mesh(
+                    new THREE.DodecahedronGeometry(0.8 + Math.random()*1.2),
+                    new THREE.MeshStandardMaterial({color: 0x64748b, roughness: 0.9})
+                );
+                ast.position.set((Math.random()-0.5)*35, (Math.random()-0.5)*20, -60);
                 scene.add(ast); asteroids.push(ast); stageObjects.push(ast);
             }
             asteroids.forEach((a, i) => {
-                a.position.z += 40 * dt;
+                a.position.z += 35 * dt;
                 a.rotation.x += dt;
-                if(a.position.distanceTo(ship.position) < 2.5) {
-                    alert("Удар астероида! Возврат на сборку ракеты.");
-                    asteroids = []; arcadeProgress = 0;
+                if(a.position.distanceTo(spaceship.position) < 1.8) {
+                    alert("💥 Столкновение с астероидом! Возврат на выбор ракеты.");
                     nextStage(3);
                 }
-                if(a.position.z > 20) { scene.remove(a); asteroids.splice(i, 1); }
+                if(a.position.z > 25) { scene.remove(a); asteroids.splice(i, 1); }
             });
-            arcadeProgress += dt * 8;
+            arcadeProgress += dt * 10;
             document.getElementById('arcade-score').innerText = `ПРОГРЕСС: ${Math.min(100, Math.floor(arcadeProgress))}%`;
             if(arcadeProgress >= 100) nextStage(5);
         }
-        
-        if(window.isOrbiting) {
-            orbitCamAngle += dt * 0.5;
-            camera.position.x = Math.cos(orbitCamAngle) * 20;
-            camera.position.z = Math.sin(orbitCamAngle) * 20;
-            camera.lookAt(0,0,0);
+
+        if(document.getElementById('cinematic-overlay').style.display === 'flex' && !isDeorbiting) {
+            orbitAngle += dt * 0.8;
+            spaceship.position.set(Math.cos(orbitAngle)*9, 0, Math.sin(orbitAngle)*9);
+            spaceship.rotation.y = -orbitAngle;
         }
 
-        if(currentStage === 5 && !window.isOrbiting) updateLanding(dt);
+        if(currentStage === 5 && document.getElementById('cinematic-overlay').style.display === 'none') {
+            updateLandingPhysics(dt);
+        }
 
         renderer.render(scene, camera);
     }
