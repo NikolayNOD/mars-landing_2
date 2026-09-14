@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Посадка на Каллисто</title>
+    <title>Экспедиция на Каллисто</title>
     <style>
         * { box-sizing: border-box; }
         body { 
@@ -24,140 +24,108 @@
             border-radius: 20px; 
             padding: 20px; 
             width: 100%;
-            max-width: 380px; 
+            max-width: 400px; 
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); 
             border: 1px solid #1f2937;
-            transition: transform 0.1s;
-        }
-
-        .shake {
-            animation: shakeAnim 0.4s ease-in-out;
-        }
-        @keyframes shakeAnim {
-            0%, 100% { transform: translate(0, 0); }
-            20% { transform: translate(-8px, 5px); }
-            40% { transform: translate(8px, -5px); }
-            60% { transform: translate(-5px, 3px); }
-            80% { transform: translate(5px, -3px); }
         }
 
         .top-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
-        .attempt-box { font-size: 14px; font-weight: 700; color: #38bdf8; }
+        .attempt-box { font-size: 13px; font-weight: 700; color: #38bdf8; }
+        h2 { color: #ffffff; margin: 0; font-size: 17px; font-weight: 700; }
+        .step-title { font-size: 13px; color: #9ca3af; margin-bottom: 12px; font-weight: 600; }
 
-        h2 { color: #ffffff; margin: 0; font-size: 18px; font-weight: 700; }
-
-        .param-group { 
-            margin-bottom: 14px; 
-            background: #1f2937; 
-            padding: 14px; 
-            border-radius: 12px; 
-        }
-        label { display: flex; justify-content: space-between; font-size: 13px; color: #9ca3af; margin-bottom: 8px; }
-        .val { color: #38bdf8; font-weight: 700; font-family: monospace; }
-        
-        input[type=range] { 
-            width: 100%; 
-            accent-color: #38bdf8; 
-            height: 6px;
-            border-radius: 3px;
-            background: #374151;
-        }
-
-        .engines-select { display: flex; gap: 8px; margin-top: 4px; }
-        .engine-opt {
+        .rocket-select { display: flex; gap: 8px; margin-bottom: 14px; }
+        .rocket-card {
             flex: 1;
-            padding: 10px;
-            background: #374151;
-            border: 1px solid transparent;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 13px;
-            font-weight: 600;
+            background: #1f2937;
+            border: 2px solid #374151;
+            border-radius: 12px;
+            padding: 8px;
             cursor: pointer;
             text-align: center;
+            transition: all 0.2s;
         }
-        .engine-opt.selected { background: #0284c7; border-color: #38bdf8; }
+        .rocket-card.selected { border-color: #38bdf8; background: #0f2942; }
+        .rocket-card canvas { width: 100%; height: 80px; display: block; margin: 0 auto 6px; }
+        .rocket-name { font-size: 11px; font-weight: 700; color: #fff; }
+        .rocket-class { font-size: 10px; color: #9ca3af; }
 
-        #sim-screen { display: none; text-align: center; }
+        .param-group { 
+            margin-bottom: 12px; 
+            background: #1f2937; 
+            padding: 12px; 
+            border-radius: 12px; 
+        }
+        label { display: flex; justify-content: space-between; font-size: 12px; color: #9ca3af; margin-bottom: 6px; }
         
-        #canvas-container { 
-            position: relative; 
-            width: 100%; 
-            height: 280px; 
-            background: #030712; 
-            border-radius: 14px; 
-            overflow: hidden; 
+        select {
+            width: 100%;
+            background: #374151;
+            color: #fff;
+            border: 1px solid #4b5563;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        #stage-canvas-container {
+            position: relative;
+            width: 100%;
+            height: 260px;
+            background: #030712;
+            border-radius: 12px;
+            overflow: hidden;
             border: 1px solid #1f2937;
+            margin-bottom: 12px;
         }
-        canvas { width: 100%; height: 100%; }
-        
-        .dash { 
-            position: absolute; 
-            top: 10px; 
-            left: 10px; 
-            text-align: left; 
-            font-family: ui-monospace, monospace; 
-            font-size: 12px; 
-            color: #e5e7eb; 
-            background: rgba(17, 24, 39, 0.9); 
-            padding: 8px 12px; 
-            border-radius: 8px; 
+        canvas { width: 100%; height: 100%; display: block; }
+
+        .hud-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #38bdf8;
+            background: rgba(17, 24, 39, 0.85);
+            padding: 6px 10px;
+            border-radius: 6px;
             border: 1px solid #374151;
-            line-height: 1.5; 
         }
 
-        .hint-box { 
-            position: absolute; 
-            top: 10px; 
-            right: 10px; 
-            font-size: 11px; 
-            font-weight: 700; 
-            background: rgba(17, 24, 39, 0.9); 
-            padding: 6px 10px; 
-            border-radius: 8px; 
-            border: 1px solid #374151;
-            max-width: 140px;
-            text-align: right;
-        }
-
-        .thrust-controls { display: flex; gap: 6px; margin-top: 12px; }
+        .thrust-controls { display: flex; gap: 6px; margin-top: 10px; }
         .t-btn {
             flex: 1;
-            padding: 14px 4px;
+            padding: 12px 4px;
             background: #374151;
             border: 2px solid transparent;
-            border-radius: 10px;
+            border-radius: 8px;
             color: white;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 12px;
             cursor: pointer;
         }
         .t-btn.off.active { background: #4b5563; border-color: #9ca3af; }
         .t-btn.mid.active { background: #d97706; border-color: #f59e0b; }
         .t-btn.max.active { background: #dc2626; border-color: #ef4444; }
 
-        #result-screen { display: none; text-align: center; padding: 10px 0; }
-        .res-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
-        .success { color: #22c55e; }
-        .warning { color: #f59e0b; }
-        .crash { color: #ef4444; }
-
-        .advice-box {
-            background: #1f2937;
-            border-left: 4px solid #38bdf8;
-            padding: 10px 12px;
-            border-radius: 8px;
-            font-size: 13px;
-            color: #d1d5db;
-            text-align: left;
-            margin: 12px 0;
-            line-height: 1.4;
+        .btn-action { 
+            width: 100%; 
+            padding: 14px; 
+            background: #0284c7; 
+            color: white; 
+            border: none; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            font-size: 14px; 
+            cursor: pointer; 
         }
 
         .achievement-box {
@@ -170,71 +138,71 @@
             text-align: center;
             margin: 12px 0;
             line-height: 1.4;
-            box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
         }
-        .achievement-title {
-            font-size: 15px;
-            font-weight: 800;
-            color: #fbbf24;
-            margin-bottom: 4px;
-        }
-        
-        .btn-action { 
-            width: 100%; 
-            padding: 14px; 
-            background: #0284c7; 
-            color: white; 
-            border: none; 
-            border-radius: 12px; 
-            font-weight: 700; 
-            font-size: 15px; 
-            margin-top: 10px; 
-            cursor: pointer; 
-        }
+        .achievement-title { font-size: 15px; font-weight: 800; color: #fbbf24; margin-bottom: 4px; }
     </style>
 </head>
 <body>
 
 <div class="card" id="main-card">
     <div class="top-bar">
-        <h2>🪐 Посадка на Каллисто</h2>
+        <h2>🚀 Миссия «Каллисто»</h2>
         <div class="attempt-box" id="attempt-display">Попытка: 1 / 3</div>
     </div>
 
-    <!-- 1. Настройка параметров -->
-    <div id="setup-screen">
-        <div class="param-group">
-            <label>Количество двигателей:</label>
-            <div class="engines-select">
-                <div class="engine-opt" onclick="selectEngines(1, this)">1 Двиг.</div>
-                <div class="engine-opt selected" onclick="selectEngines(2, this)">2 Двиг.</div>
-                <div class="engine-opt" onclick="selectEngines(3, this)">3 Двиг.</div>
+    <!-- ЭКРАН 1: Настройка ракеты и даты -->
+    <div id="screen-setup">
+        <div class="step-title">Шаг 1: Выбор ракеты-носителя (РФ)</div>
+        <div class="rocket-select">
+            <div class="rocket-card" onclick="selectRocket('light', this)">
+                <canvas id="rc-light"></canvas>
+                <div class="rocket-name">Ангара-1.2</div>
+                <div class="rocket-class">Лёгкая</div>
+            </div>
+            <div class="rocket-card selected" onclick="selectRocket('medium', this)">
+                <canvas id="rc-medium"></canvas>
+                <div class="rocket-name">Союз-2.1б</div>
+                <div class="rocket-class">Средняя</div>
+            </div>
+            <div class="rocket-card" onclick="selectRocket('heavy', this)">
+                <canvas id="rc-heavy"></canvas>
+                <div class="rocket-name">Ангара-А5</div>
+                <div class="rocket-class">Тяжёлая</div>
             </div>
         </div>
 
+        <div class="step-title">Шаг 2: Окно старта (гравитационный манёвр)</div>
         <div class="param-group">
-            <label>Запас топлива: <span class="val" id="fuel-val">60 %</span></label>
-            <input type="range" id="fuel-input" min="30" max="100" value="60" oninput="document.getElementById('fuel-val').innerText = this.value + ' %'">
-            <div style="font-size: 11px; color: #6b7280; margin-top: 6px;">💡 Больше топлива даёт больше времени на торможение</div>
+            <label>Дата запуска с Земли:</label>
+            <select id="launch-date">
+                <option value="optimal">15 Октября — Идеальное окно (Юпитер рядом)</option>
+                <option value="suboptimal">20 Ноября — Допустимое окно (+15% расхода)</option>
+                <option value="bad">05 Января — Неоптимальное окно (+40% расхода)</option>
+            </select>
         </div>
 
-        <button class="btn-action" onclick="startFlight()">🚀 НАЧАТЬ СПУСК</button>
+        <button class="btn-action" onclick="startLaunchStage()">🌍 СТАРТ С ЗЕМЛИ</button>
     </div>
 
-    <!-- 2. Симулятор падения -->
-    <div id="sim-screen">
-        <div id="canvas-container">
-            <div class="dash">
-                Высота: <span id="d-alt" style="color:#38bdf8">1000</span> м<br>
-                Скорость: <b id="d-vel">0.0</b> м/с<br>
-                Топливо: <span id="d-fuel" style="color:#22c55e">100</span>%
-            </div>
-            
-            <div id="hint" class="hint-box" style="color:#f59e0b;">💡 Выбирай режим тяги!</div>
-            
-            <canvas id="canvas"></canvas>
+    <!-- ЭКРАН 2: Анимация взлета и перелета -->
+    <div id="screen-animation" style="display: none;">
+        <div class="step-title" id="anim-title">Этап 1: Вывод на орбиту</div>
+        <div id="stage-canvas-container">
+            <div class="hud-overlay" id="hud-text">Высота: 0 км</div>
+            <canvas id="anim-canvas"></canvas>
         </div>
-        
+        <button class="btn-action" id="anim-next-btn" style="display: none;" onclick="goNextAnimStage()">ДАЛЕЕ</button>
+    </div>
+
+    <!-- ЭКРАН 3: Симулятор посадки -->
+    <div id="screen-landing" style="display: none;">
+        <div class="step-title">Этап 3: Мягкая посадка на Каллисто</div>
+        <div id="stage-canvas-container">
+            <div class="hud-overlay" id="landing-hud">
+                Высота: 1000 м<br>Скорость: 15.0 м/с<br>Топливо: 100%
+            </div>
+            <canvas id="landing-canvas"></canvas>
+        </div>
         <div class="thrust-controls">
             <button class="t-btn off active" onclick="setThrust(0)">🛑 ВЫКЛ</button>
             <button class="t-btn mid" onclick="setThrust(0.5)">⚡ 50%</button>
@@ -242,16 +210,12 @@
         </div>
     </div>
 
-    <!-- 3. Итог -->
-    <div id="result-screen">
-        <div id="res-status" class="res-title"></div>
-        <div id="res-desc" style="font-size: 14px; color: #9ca3af;"></div>
-        
-        <!-- Блок достижений и финала -->
-        <div id="achievement-container" class="achievement-box" style="display: none;"></div>
+    <!-- ЭКРАН 4: Итог попытки / Финал -->
+    <div id="screen-result" style="display: none; text-align: center;">
+        <h3 id="res-title" style="font-size: 20px; margin: 10px 0 6px;"></h3>
+        <p id="res-desc" style="font-size: 13px; color: #9ca3af; margin-bottom: 12px;"></p>
 
-        <!-- Окно с умным советом при аварии -->
-        <div id="advice-container" class="advice-box" style="display: none;"></div>
+        <div id="achievement-container" class="achievement-box" style="display: none;"></div>
 
         <button id="res-btn" class="btn-action" onclick="nextAttempt()"></button>
     </div>
@@ -259,81 +223,153 @@
 
 <script>
     let currentAttempt = 1;
-    let successfulLandings = 0; 
-    let numEngines = 2;
-    let fuelCap = 60, currentFuel = 100;
-    let alt = 1000, vel = 15, thrustLevel = 0; 
-    let particles = [];
-    let loop;
-
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let successfulLandings = 0;
+    let selectedRocket = 'medium';
+    let fuelCap = 100, currentFuel = 100;
     
-    function playBeep(freq, type, duration) {
-        try {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = type;
-            osc.frequency.value = freq;
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
-            osc.stop(audioCtx.currentTime + duration);
-        } catch(e) {}
-    }
+    // Переменные симуляции посадки
+    let alt = 1000, vel = 15, thrustLevel = 0;
+    let landingLoop;
 
-    function triggerShake() {
-        const card = document.getElementById('main-card');
-        card.classList.remove('shake');
-        void card.offsetWidth;
-        card.classList.add('shake');
-    }
+    // Инициализация превью ракет
+    window.onload = () => {
+        drawRocketPreview('rc-light', 'light');
+        drawRocketPreview('rc-medium', 'medium');
+        drawRocketPreview('rc-heavy', 'heavy');
+    };
 
-    function selectEngines(count, elem) {
-        numEngines = count;
-        document.querySelectorAll('.engine-opt').forEach(el => el.classList.remove('selected'));
+    function selectRocket(type, elem) {
+        selectedRocket = type;
+        document.querySelectorAll('.rocket-card').forEach(el => el.classList.remove('selected'));
         elem.classList.add('selected');
     }
 
-    function updateAttemptUI() {
-        document.getElementById('attempt-display').innerText = `Попытка: ${currentAttempt} / 3`;
+    function drawRocketPreview(id, type) {
+        const cvs = document.getElementById(id);
+        cvs.width = cvs.parentElement.offsetWidth;
+        cvs.height = 80;
+        const ctx = cvs.getContext('2d');
+        const cx = cvs.width / 2;
+
+        ctx.fillStyle = '#d1d5db';
+        if (type === 'light') {
+            ctx.fillRect(cx - 5, 20, 10, 45);
+            ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.moveTo(cx-5,20); ctx.lineTo(cx,10); ctx.lineTo(cx+5,20); ctx.fill();
+        } else if (type === 'medium') {
+            ctx.fillRect(cx - 6, 18, 12, 48);
+            ctx.fillRect(cx - 11, 35, 4, 30); ctx.fillRect(cx + 7, 35, 4, 30);
+            ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.moveTo(cx-6,18); ctx.lineTo(cx,8); ctx.lineTo(cx+6,18); ctx.fill();
+        } else {
+            ctx.fillRect(cx - 8, 15, 16, 52);
+            ctx.fillRect(cx - 15, 28, 6, 38); ctx.fillRect(cx + 9, 28, 6, 38);
+            ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.moveTo(cx-8,15); ctx.lineTo(cx,5); ctx.lineTo(cx+8,15); ctx.fill();
+        }
     }
 
-    function startFlight() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        
-        fuelCap = parseInt(document.getElementById('fuel-input').value);
+    // Этап 1: Взлет с Земли
+    let animStep = 0;
+    function startLaunchStage() {
+        document.getElementById('screen-setup').style.display = 'none';
+        document.getElementById('screen-animation').style.display = 'block';
+        document.getElementById('anim-next-btn').style.display = 'none';
+        document.getElementById('anim-title').innerText = 'Этап 1: Вывод на опорную орбиту';
+
+        // Расчет стартового бака
+        let baseFuel = selectedRocket === 'light' ? 65 : (selectedRocket === 'medium' ? 80 : 100);
+        const dateVal = document.getElementById('launch-date').value;
+        if (dateVal === 'suboptimal') baseFuel -= 15;
+        if (dateVal === 'bad') baseFuel -= 35;
+        fuelCap = Math.max(30, baseFuel);
+
+        let progress = 0;
+        const cvs = document.getElementById('anim-canvas');
+        cvs.width = cvs.parentElement.offsetWidth; cvs.height = 260;
+        const ctx = cvs.getContext('2d');
+
+        let launchInterval = setInterval(() => {
+            progress += 2;
+            ctx.clearRect(0,0,cvs.width,cvs.height);
+            
+            // Земля и небо
+            ctx.fillStyle = progress < 50 ? '#1e3a8a' : '#030712';
+            ctx.fillRect(0,0,cvs.width,cvs.height);
+
+            // Ракета
+            let ry = cvs.height - (progress * 2.2);
+            ctx.fillStyle = '#f3f4f6';
+            ctx.fillRect(cvs.width/2 - 6, ry, 12, 35);
+            
+            // Пламя
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath(); ctx.arc(cvs.width/2, ry + 38, 6 + Math.random()*4, 0, Math.PI*2); ctx.fill();
+
+            document.getElementById('hud-text').innerText = `Высота: ${progress * 4} км\nСкорость: ${(progress * 0.1).toFixed(1)} км/с`;
+
+            if (progress >= 100) {
+                clearInterval(launchInterval);
+                document.getElementById('hud-text').innerText = 'Орбита достигнута!\nГотовность к перелёту.';
+                document.getElementById('anim-next-btn').style.display = 'block';
+                animStep = 1;
+            }
+        }, 50);
+    }
+
+    // Этап 2: Перелет и Гравитационный манёвр
+    function goNextAnimStage() {
+        if (animStep === 1) {
+            document.getElementById('anim-next-btn').style.display = 'none';
+            document.getElementById('anim-title').innerText = 'Этап 2: Гравитационный манёвр у Юпитера';
+            
+            let angle = 0;
+            const cvs = document.getElementById('anim-canvas');
+            const ctx = cvs.getContext('2d');
+
+            let cruiseInterval = setInterval(() => {
+                angle += 0.05;
+                ctx.clearRect(0,0,cvs.width,cvs.height);
+
+                // Юпитер
+                ctx.fillStyle = '#d97706';
+                ctx.beginPath(); ctx.arc(cvs.width/2, cvs.height/2, 35, 0, Math.PI*2); ctx.fill();
+
+                // Траектория корабля
+                let rx = cvs.width/2 + Math.cos(angle) * 75;
+                let ry = cvs.height/2 + Math.sin(angle) * 45;
+
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath(); ctx.arc(rx, ry, 4, 0, Math.PI*2); ctx.fill();
+
+                document.getElementById('hud-text').innerText = `Ускорение в поле тяготения...\nТопливный бак: ${fuelCap}%`;
+
+                if (angle >= Math.PI * 1.2) {
+                    clearInterval(cruiseInterval);
+                    document.getElementById('anim-next-btn').innerText = 'ПЕРЕЙТИ К ПОСАДКЕ';
+                    document.getElementById('anim-next-btn').style.display = 'block';
+                    animStep = 2;
+                }
+            }, 50);
+        } else {
+            startLandingStage();
+        }
+    }
+
+    // Этап 3: Посадка на Каллисто
+    function startLandingStage() {
+        document.getElementById('screen-animation').style.display = 'none';
+        document.getElementById('screen-landing').style.display = 'block';
+
         currentFuel = fuelCap;
+        alt = 1000; vel = 15; thrustLevel = 0;
         
-        vel = 15;
-        alt = 1000;
-        thrustLevel = 0;
-        particles = [];
-        updateThrustUI();
+        const cvs = document.getElementById('landing-canvas');
+        cvs.width = cvs.parentElement.offsetWidth; cvs.height = 260;
 
-        document.getElementById('setup-screen').style.display = 'none';
-        document.getElementById('sim-screen').style.display = 'block';
-
-        const canvas = document.getElementById('canvas');
-        canvas.width = canvas.parentElement.offsetWidth;
-        canvas.height = 280;
-
-        loop = setInterval(updatePhysics, 1000/30);
+        landingLoop = setInterval(updateLandingPhysics, 1000/30);
     }
 
     function setThrust(level) {
         if (currentFuel <= 0 && level > 0) return;
-        
         thrustLevel = level;
-        updateThrustUI();
-        if (navigator.vibrate) navigator.vibrate(25);
-        
-        if (thrustLevel > 0) {
-            playBeep(120 + thrustLevel * 80, 'sawtooth', 0.1);
-        }
-    }
-
-    function updateThrustUI() {
         const btns = document.querySelectorAll('.t-btn');
         btns.forEach(b => b.classList.remove('active'));
         if (thrustLevel === 0) btns[0].classList.add('active');
@@ -341,224 +377,102 @@
         else if (thrustLevel === 1.0) btns[2].classList.add('active');
     }
 
-    function updatePhysics() {
+    function updateLandingPhysics() {
         if (thrustLevel > 0 && currentFuel > 0) {
-            currentFuel -= (numEngines * thrustLevel * 0.32);
-            if (currentFuel <= 0) {
-                currentFuel = 0;
-                setThrust(0);
-            }
+            currentFuel -= (thrustLevel * 0.35);
+            if (currentFuel <= 0) { currentFuel = 0; setThrust(0); }
         }
 
-        let massFactor = 0.18 + (currentFuel * 0.001); 
-        let thrustPower = (numEngines * thrustLevel * 0.38); 
+        let gravity = 0.18 + (currentFuel * 0.0008);
+        let thrust = thrustLevel * 0.72;
 
-        vel += (massFactor - thrustPower);
+        vel += (gravity - thrust);
         if (vel < -3) vel = -3;
-
         alt -= vel * 0.35;
 
-        document.getElementById('d-alt').innerText = Math.max(0, Math.round(alt));
-        
-        const velElem = document.getElementById('d-vel');
-        velElem.innerText = vel.toFixed(1);
-        
-        if (vel <= 4.0) velElem.style.color = "#22c55e";
-        else if (vel <= 9.0) velElem.style.color = "#f59e0b";
-        else velElem.style.color = "#ef4444";
-        
-        document.getElementById('d-fuel').innerText = Math.round(currentFuel);
+        document.getElementById('landing-hud').innerHTML = 
+            `Высота: ${Math.max(0, Math.round(alt))} м<br>` +
+            `Скорость: ${vel.toFixed(1)} м/с<br>` +
+            `Топливо: ${Math.round(currentFuel)}%`;
 
-        const hint = document.getElementById('hint');
-        if (currentFuel <= 0) {
-            hint.innerText = "⚠️ Топливо кончилось!";
-            hint.style.color = "#ef4444";
-        } else if (vel <= 4.0) {
-            hint.innerText = "🌟 Отличная скорость!";
-            hint.style.color = "#22c55e";
-        } else if (vel <= 9.0) {
-            hint.innerText = "⚠️ Скорость высоковата!";
-            hint.style.color = "#f59e0b";
-        } else {
-            hint.innerText = "🔴 СНИЖАЙ СКОРОСТЬ!";
-            hint.style.color = "#ef4444";
-        }
-
-        draw();
-
-        if (alt >= 2000) {
-            clearInterval(loop);
-            showResult("space");
-        }
+        drawLandingCanvas();
 
         if (alt <= 0) {
-            clearInterval(loop);
-            if (vel <= 4.0) showResult("perfect");
-            else if (vel <= 9.0) showResult("hard");
-            else showResult("crash");
+            clearInterval(landingLoop);
+            finishAttempt(vel <= 4.0);
         }
     }
 
-    function draw() {
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const w = canvas.width;
-        const h = canvas.height;
+    function drawLandingCanvas() {
+        const cvs = document.getElementById('landing-canvas');
+        const ctx = cvs.getContext('2d');
+        const w = cvs.width, h = cvs.height;
 
         ctx.clearRect(0, 0, w, h);
+        // Поверхность Каллисто
+        ctx.fillStyle = '#374151'; ctx.fillRect(0, h - 20, w, 20);
 
-        ctx.fillStyle = '#374151';
-        ctx.fillRect(0, h - 20, w, 20);
+        let y = h - 20 - (alt * (h - 60) / 1000) - 15;
+        if (y < 15) y = 15;
 
-        let y = h - 20 - (alt * (h - 80) / 1000) - 20;
-        if (y < 20) y = 20;
-
+        // Корабль
+        ctx.fillStyle = '#9ca3af'; ctx.fillRect(w/2 - 10, y, 20, 14);
         if (thrustLevel > 0 && currentFuel > 0) {
-            for(let i = 0; i < numEngines * 2; i++) {
-                particles.push({
-                    x: w/2 + (Math.random() * 20 - 10),
-                    y: y + 18,
-                    vx: (Math.random() - 0.5) * 2,
-                    vy: Math.random() * 3 + 2,
-                    life: 1,
-                    color: Math.random() > 0.3 ? '#f97316' : '#ef4444'
-                });
-            }
+            ctx.fillStyle = '#f97316';
+            ctx.fillRect(w/2 - 4, y + 14, 8, 8 + Math.random()*6);
         }
-
-        if (alt < 150 && thrustLevel > 0) {
-            particles.push({
-                x: w/2 + (Math.random() * 60 - 30),
-                y: h - 20,
-                vx: (Math.random() - 0.5) * 6,
-                vy: -Math.random() * 2,
-                life: 0.8,
-                color: '#6b7280'
-            });
-        }
-
-        for (let i = particles.length - 1; i >= 0; i--) {
-            let p = particles[i];
-            ctx.fillStyle = p.color;
-            ctx.globalAlpha = p.life;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 2 + (1 - p.life) * 3, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.globalAlpha = 1.0;
-
-            p.x += p.vx;
-            p.y += p.vy;
-            p.life -= 0.05;
-
-            if (p.life <= 0) particles.splice(i, 1);
-        }
-
-        ctx.fillStyle = '#9ca3af';
-        ctx.fillRect(w/2 - 14, y, 28, 16);
-        
-        ctx.fillStyle = '#38bdf8';
-        ctx.fillRect(w/2 - 6, y + 3, 12, 5);
-
-        ctx.strokeStyle = '#6b7280';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(w/2 - 14, y + 16); ctx.lineTo(w/2 - 20, y + 22);
-        ctx.moveTo(w/2 + 14, y + 16); ctx.lineTo(w/2 + 20, y + 22);
-        ctx.stroke();
     }
 
-    function showResult(type) {
-        document.getElementById('sim-screen').style.display = 'none';
-        document.getElementById('result-screen').style.display = 'block';
+    function finishAttempt(isSuccess) {
+        document.getElementById('screen-landing').style.display = 'none';
+        document.getElementById('screen-result').style.display = 'block';
 
-        const status = document.getElementById('res-status');
+        const title = document.getElementById('res-title');
         const desc = document.getElementById('res-desc');
-        const advice = document.getElementById('advice-container');
         const achievement = document.getElementById('achievement-container');
         const resBtn = document.getElementById('res-btn');
 
-        advice.style.display = "none";
-        achievement.style.display = "none";
+        achievement.style.display = 'none';
 
-        let landed = (type === "perfect" || type === "hard");
-        if (landed) successfulLandings++;
-
-        if (landed) {
-            playBeep(600, 'sine', 0.3);
-            if (type === "perfect") {
-                status.innerText = "🌟 ИДЕАЛЬНО!";
-                status.className = "res-title success";
-                desc.innerText = `Скорость касания: ${vel.toFixed(1)} м/с. Мягкая посадка!`;
-            } else {
-                status.innerText = "⚠️ ЖЁСТКАЯ ПОСАДКА";
-                status.className = "res-title warning";
-                desc.innerText = `Скорость касания: ${vel.toFixed(1)} м/с. Корабль цел!`;
-            }
+        if (isSuccess) {
+            successfulLandings++;
+            title.innerText = '🌟 МЯГКАЯ ПОСАДКА!';
+            title.style.color = '#22c55e';
+            desc.innerText = `Скорость касания: ${vel.toFixed(1)} м/с. Модуль успешно приземлился!`;
         } else {
-            playBeep(90, 'square', 0.4);
-            triggerShake();
-            status.innerText = type === "space" ? "🌌 УЛЕТЕЛ В КОСМОС!" : "💥 ВЗРЫВ ПРИ УДАРЕ!";
-            status.className = "res-title crash";
-            desc.innerText = `Скорость касания: ${vel.toFixed(1)} м/с. Посадка провалена.`;
-
-            // Советы по исправлению ошибки
-            advice.style.display = "block";
-            if (type === "space") {
-                advice.innerHTML = "💡 <b>Совет:</b> Тяга 100% горела слишком долго. Вовремя выключай двигатели!";
-            } else if (currentFuel <= 0) {
-                advice.innerHTML = "💡 <b>Совет:</b> Увеличь значение «Запас топлива» в настройках или экономь его в полете!";
-            } else {
-                advice.innerHTML = "💡 <b>Совет:</b> Включай 100% тягу чуть раньше — примерно на высоте 350 метров!";
-            }
+            title.innerText = '💥 КРАХ МИССИИ!';
+            title.style.color = '#ef4444';
+            desc.innerText = `Скорость касания: ${vel.toFixed(1)} м/с. Модуль разбился о поверхность.`;
         }
 
-        // ПРОВЕРКА: ЗАВЕРШИЛАСЬ ЛИ 3-Я ПОПЫТКА?
         if (currentAttempt >= 3) {
-            achievement.style.display = "block";
-
+            achievement.style.display = 'block';
             if (successfulLandings === 3) {
-                achievement.innerHTML = `
-                    <div class="achievement-title">🏆 МАСТЕР КОСМОНАВТИКИ</div>
-                    Ты совершил 3 успешные посадки из 3! Абсолютный рекорд и высший пилотаж! 🚀
-                `;
+                achievement.innerHTML = `<div class="achievement-title">🏆 МАСТЕР КОСМОНАВТИКИ</div>3 из 3 успешных посадок! Высший пилотаж!`;
             } else if (successfulLandings === 2) {
-                achievement.innerHTML = `
-                    <div class="achievement-title">🎖️ ОПЫТНЫЙ ПИЛОТ</div>
-                    Уверенная работа! 2 успешные посадки из 3. Ты отлично справляешься с управлением! 💪
-                `;
+                achievement.innerHTML = `<div class="achievement-title">🎖️ ОПЫТНЫЙ ПИЛОТ</div>2 из 3 успешных посадок. Отличный результат!`;
             } else if (successfulLandings === 1) {
-                achievement.innerHTML = `
-                    <div class="achievement-title">🚀 НАЧИНАЮЩИЙ ИСПЫТАТЕЛЬ</div>
-                    Есть 1 успешная посадка! Главное — понятен принцип, дальше будет только лучше! 👍
-                `;
+                achievement.innerHTML = `<div class="achievement-title">🚀 НАЧИНАЮЩИЙ ИСПЫТАТЕЛЬ</div>1 успешная посадка. Есть куда расти!`;
             } else {
-                achievement.innerHTML = `
-                    <div class="achievement-title">💀 ИГРА ОКОНЧЕНА</div>
-                    Все 3 корабля потеряны. Попробуй изменить настройки топлива или двигателей! 🛠️
-                `;
+                achievement.innerHTML = `<div class="achievement-title">💀 ИГРА ОКОНЧЕНА</div>Все 3 попытки провалены. Попробуйте выбрать тяжёлую ракету и точное окно!`;
             }
-
-            resBtn.innerText = "🔄 НАЧАТЬ ИГРУ ЗАНОВО";
+            resBtn.innerText = '🔄 НАЧАТЬ ИГРУ ЗАНОВО';
         } else {
-            resBtn.innerText = "➡️ СЛЕДУЮЩАЯ ПОПЫТКА";
+            resBtn.innerText = '➡️ СЛЕДУЮЩАЯ ПОПЫТКА';
         }
     }
 
     function nextAttempt() {
         if (currentAttempt >= 3) {
-            // Сброс всей игры для нового игрока / новой серии из 3 попыток
             currentAttempt = 1;
             successfulLandings = 0;
         } else {
             currentAttempt++;
         }
-
-        updateAttemptUI();
-        document.getElementById('result-screen').style.display = 'none';
-        document.getElementById('setup-screen').style.display = 'block';
+        document.getElementById('attempt-display').innerText = `Попытка: ${currentAttempt} / 3`;
+        document.getElementById('screen-result').style.display = 'none';
+        document.getElementById('screen-setup').style.display = 'block';
     }
-
-    updateAttemptUI();
 </script>
 
 </body>
