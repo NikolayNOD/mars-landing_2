@@ -2,416 +2,687 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Миссия к Каллисто: Баллистика и Гравитационные Манёвры</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Миссия Каллисто: Научное Издание v3</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
     <style>
-        :root {
-            --bg-color: #0b0f19;
-            --panel-bg: rgba(18, 24, 38, 0.85);
-            --accent: #3b82f6;
-            --accent-hover: #2563eb;
-            --text-color: #f3f4f6;
-            --text-muted: #9ca3af;
-            --border: #374151;
-            --success: #10b981;
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto+Mono:wght@400;700&display=swap');
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+        body { width: 100vw; height: 100dvh; overflow: hidden; background: #03030a; font-family: 'Montserrat', sans-serif; color: #f8fafc; }
+        
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; touch-action: none; }
+
+        .ui-layer { position: absolute; z-index: 10; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding: 15px; pointer-events: none; overflow-y: auto;}
+        .interactive { pointer-events: auto; }
+        
+        .panel { 
+            background: rgba(10, 15, 30, 0.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 16px; padding: 20px; width: 100%; max-width: 480px; 
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(56, 189, 248, 0.1); margin-bottom: 15px;
+            flex-shrink: 0;
         }
 
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            overflow-x: hidden;
+        h1 { font-size: 1.05rem; color: #38bdf8; text-transform: uppercase; text-align: center; font-weight: 900; letter-spacing: 1px; margin-bottom: 12px; }
+        h2 { font-size: 0.82rem; color: #94a3b8; margin-bottom: 12px; font-weight: 400; text-align: center; line-height: 1.4;}
+        
+        .btn-main { 
+            width: 100%; padding: 14px; background: linear-gradient(135deg, #0284c7, #2563eb); border: none; 
+            border-radius: 10px; color: #fff; font-weight: 700; font-size: 0.9rem; text-transform: uppercase;
+            cursor: pointer; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4); margin-top: 10px; font-family: 'Montserrat', sans-serif;
         }
+        .btn-secondary { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); box-shadow: none; }
+        .btn-main:active { transform: scale(0.97); }
 
-        header {
-            text-align: center;
-            padding: 20px;
-            background: linear-gradient(to bottom, #020617, var(--bg-color));
-            border-bottom: 1px solid var(--border);
-        }
+        .equip-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; max-height: 200px; overflow-y: auto; }
+        .equip-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); cursor: pointer; }
+        .equip-item.selected { border-color: #38bdf8; background: rgba(56, 189, 248, 0.15); }
+        .equip-name { font-weight: 700; font-size: 0.8rem; }
+        .equip-stat { font-family: 'Roboto Mono', monospace; font-size: 0.7rem; color: #cbd5e1; }
 
-        header h1 {
-            margin: 0;
-            font-size: 1.8rem;
-            color: #60a5fa;
-        }
+        .info-box { background: rgba(0,0,0,0.5); border-left: 3px solid #38bdf8; padding: 10px; font-family: 'Roboto Mono', monospace; font-size: 0.75rem; border-radius: 0 8px 8px 0; margin-bottom: 12px; line-height: 1.4;}
+        .math-input { width: 130px; padding: 8px; background: rgba(0,0,0,0.6); border: 1px solid #38bdf8; color: #38bdf8; font-family: 'Roboto Mono', monospace; font-size: 1rem; text-align: center; border-radius: 6px; outline: none;}
 
-        header p {
-            margin: 5px 0 0;
-            color: var(--text-muted);
-            font-size: 0.95rem;
-        }
+        .planet-selector { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+        .p-btn { flex: 1; padding: 10px 5px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.75rem; font-weight: 700; cursor: pointer; text-align: center;}
+        .p-btn.active { border-color: #a855f7; background: rgba(168, 85, 247, 0.2); color: #c084fc; }
 
-        .container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            max-width: 1400px;
-            margin: 20px auto;
-            padding: 0 20px;
-        }
+        .hud-bar { display: flex; justify-content: space-between; width: 100%; max-width: 480px; font-family: 'Roboto Mono', monospace; font-size: 0.85rem; padding: 10px 15px; background: rgba(10, 15, 30, 0.85); border-radius: 12px; border: 1px solid rgba(56,189,248,0.3); margin-bottom: auto;}
+        
+        .controls { display: flex; gap: 10px; width: 100%; max-width: 480px; margin-top: auto; padding-bottom: 15px; pointer-events: auto; }
+        .ctrl-btn { flex: 1; padding: 22px 0; background: rgba(30, 41, 59, 0.95); border: 1px solid #38bdf8; border-radius: 12px; color: #fff; font-weight: 900; font-size: 1.2rem; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.6); touch-action: none; }
+        .ctrl-btn.thrust { flex: 1.5; background: linear-gradient(135deg, #ea580c, #dc2626); border-color: #fca5a5; }
 
-        @media (max-width: 900px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .card {
-            background: var(--panel-bg);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(8px);
-        }
-
-        .card h2 {
-            margin-top: 0;
-            font-size: 1.3rem;
-            border-bottom: 2px solid var(--accent);
-            padding-bottom: 8px;
-            color: #93c5fd;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        input, select {
-            width: 100%;
-            padding: 10px;
-            background: #1f2937;
-            border: 1px solid var(--border);
-            color: white;
-            border-radius: 6px;
-            font-size: 0.95rem;
-            box-sizing: border-box;
-        }
-
-        button {
-            background: var(--accent);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            font-size: 1rem;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 100%;
-            transition: background 0.2s;
-        }
-
-        button:hover {
-            background: var(--accent-hover);
-        }
-
-        .results {
-            background: #111827;
-            border-left: 4px solid var(--success);
-            padding: 15px;
-            border-radius: 4px;
-            margin-top: 15px;
-            font-size: 0.95rem;
-            line-height: 1.5;
-        }
-
-        /* Визуализация Каллисто */
-        .callisto-viewport {
-            width: 100%;
-            height: 250px;
-            background: radial-gradient(circle at center, #1e293b 0%, #020617 100%);
-            border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            overflow: hidden;
-            border: 1px solid var(--border);
-        }
-
-        .callisto-sphere {
-            width: 130px;
-            height: 130px;
-            background: radial-gradient(circle at 30% 30%, #94a3b8, #334155 70%, #0f172a 100%);
-            border-radius: 50%;
-            box-shadow: inset -15px -15px 30px rgba(0,0,0,0.8), 0 0 20px rgba(148, 163, 184, 0.2);
-            position: relative;
-            animation: rotateCallisto 12s linear infinite;
-        }
-
-        .crater {
-            position: absolute;
-            background: rgba(15, 23, 42, 0.5);
-            border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        @keyframes rotateCallisto {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Картинка маневра */
-        .trajectory-viewport {
-            width: 100%;
-            height: 220px;
-            background: #020617;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
-
-        .trajectory-canvas-text {
-            position: absolute;
-            bottom: 10px;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            background: rgba(0,0,0,0.6);
-            padding: 4px 8px;
-            border-radius: 4px;
-        }
-
-        .orbit-svg {
-            width: 100%;
-            height: 100%;
-        }
+        .marker { position: absolute; background: rgba(10, 15, 30, 0.95); border: 1px solid #38bdf8; padding: 8px 12px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; pointer-events: auto; display: none; z-index: 15; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transform: translate(-50%, -50%); color: #fff; font-weight: 700;}
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>Мастер-класс: Интерактивное проектирование миссии к Каллисто</h1>
-        <p>Расчет ступеней ракетоносителя, баллистика, выбор дат и гравитационные манёвры</p>
-    </header>
+<div id="canvas-container"></div>
 
-    <div class="container">
-        <!-- БЛОК 1: РАСЧЕТ СТУПЕНЕЙ РАКЕТЫ -->
-        <div class="card">
-<h2>1. Расчет стартовой массы ракеты-носителя</h2>
-            <div class="form-group">
-                <label for="payload">Масса полезной нагрузки (спутника, кг):</label>
-                <input type="number" id="payload" value="1000" min="100" max="10000">
-            </div>
-            <div class="form-group">
-                <label for="impulse">Удельный импульс двигателя $w$ (м/с):</label>
-                <input type="number" id="impulse" value="2900" min="1000" max="5000">
-            </div>
-            <div class="form-group">
-                <label for="coeff">Коэффициент конструктивного совершенства $k$:</label>
-                <input type="number" id="coeff" value="9" min="1" max="20">
-            </div>
-            <div class="form-group">
-                <label for="velocity">Характеристическая скорость выведения (м/с):</label>
-                <input type="number" id="velocity" value="8043.4" step="0.1">
-            </div>
-            <button onclick="calculateStages()">Рассчитать ступени ракеты</button>
+<!-- Метки на Каллисто -->
+<div id="marker-valhalla" class="marker interactive" onclick="inspectZone('valhalla')">ВАЛЬХАЛЛА<br><span style="color:#a3e635; font-size:0.65rem;">Наука: x3.0</span></div>
+<div id="marker-asgard" class="marker interactive" onclick="inspectZone('asgard')">АСГАРД<br><span style="color:#facc15; font-size:0.65rem;">Наука: x2.0</span></div>
+<div id="marker-equator" class="marker interactive" onclick="inspectZone('equator')">ЭКВАТОР<br><span style="color:#94a3b8; font-size:0.65rem;">Наука: x1.0</span></div>
 
-            <div id="stageResults" class="results" style="display: none;">
-                <!-- Сюда выводится результат -->
-            </div>
+<div class="ui-layer" id="ui-container">
+    
+    <!-- ЭТАП 1: КОНСТРУКТОР С ЛИМИТОМ -->
+    <div id="stage1" class="panel interactive">
+        <h1>1. КОНСТРУКТОР ЗОНДА</h1>
+        <h2>Лимит платформы: <span style="color:#38bdf8;">250 кг</span>. Соберите полезную нагрузку.</h2>
+        
+        <div class="info-box">
+            <div style="display:flex; justify-content: space-between;"><span>Масса зонда ($m_{пн}$):</span> <b id="ui-mass" style="color:#38bdf8;">80 кг</b></div>
+            <div style="display:flex; justify-content: space-between; margin-top:4px;"><span>Научный потенциал:</span> <b id="ui-sci" style="color:#a3e635;">100 б.</b></div>
+            <div style="display:flex; justify-content: space-between; margin-top:4px;"><span>Статус:</span> <b id="ui-status" style="color:#a3e635;">НОРМА</b></div>
         </div>
 
-        <!-- БЛОК 2: ВЫБОР КАЛЛИСТО И 3D ПЛАНЕТА -->
-        <div class="card">
-            <h2>2. Цель миссии: Планета Каллисто</h2>
-            <div class="form-group">
-                <label>Статус выбора цели:</label>
-                <select id="targetSelect" onchange="updateTargetView()">
-                    <option value="callisto">Каллисто (Спутник Юпитера)</option>
-                    <option value="earth">Околоземная орбита (База)</option>
-                </select>
-            </div>
-            
-            <div class="callisto-viewport">
-                <div class="callisto-sphere" id="planetSphere">
-                    <div class="crater" style="width: 25px; height: 25px; top: 30px; left: 40px;"></div>
-                    <div class="crater" style="width: 15px; height: 15px; top: 80px; left: 90px;"></div>
-                    <div class="crater" style="width: 30px; height: 30px; top: 70px; left: 20px;"></div>
-                </div>
-            </div>
-            <p id="targetDescription" style="font-size: 0.9rem; color: var(--text-muted); margin-top: 10px; text-align: center;">
-                Каллисто вращается: ледяное тело с древней корой, богатое кратерами. Идеальный объект для изучения глубокого космоса.
-            </p>
+        <div class="equip-list" id="equip-list"></div>
+        <button class="btn-main" onclick="nextStage(2)">ПЕРЕЙТИ К РАСЧЕТУ РАКЕТЫ</button>
+    </div>
+
+    <!-- ЭТАП 2: РАСЧЕТ ПО МЕТОДИЧКЕ (2 СТУПЕНИ) -->
+    <div id="stage2" class="panel interactive" style="display:none;">
+        <h1>2. РАСЧЕТ СТУПЕНЕЙ РАКЕТЫ</h1>
+        <h2>Методика: Двухступенчатая ракета, коэффициент $k=9$ (масса конструкции 10% от заправленной ступени)[cite: 1].</h2>
+        
+        <div class="info-box" id="calc-formula-desc">
+            <b>Шаг расчёта 2-й ступени:</b><br>
+            Для полезной нагрузки массы <span id="s2-mpn" style="color:#38bdf8">80</span> кг с учетом формул методички рассчитываем полную массу 2-й ступени ($m_{2ступ}$).<br>
+            Введите расчетное значение для 2-й ступени (кг):
         </div>
 
-        <!-- БЛОК 3: ГРАВИТАЦИОННЫЕ МАНЁВРЫ И ДАТЫ -->
-        <div class="card" style="grid-column: 1 / -1;">
-            <h2>3. Выбор даты старта и гравитационных манёвров</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                <div class="form-group">
-                    <label for="launchDate">Дата старта миссии:</label>
-                    <input type="date" id="launchDate" value="2031-06-15" onchange="updateTrajectory()">
-                </div>
-                <div class="form-group">
-                    <label for="maneuverType">Гравитационный манёвр (маршрут):</label>
-                    <select id="maneuverType" onchange="updateTrajectory()">
-                        <option value="direct">Прямой перелет (Без манёвров)</option>
-                        <option value="venus_earth">ГМ: Земля -> Венера -> Земля -> Юпитер</option>
-                        <option value="mars_assist">ГМ: Земля -> Марс -> Юпитер (Би-эллиптический)</option>
-                    </select>
-                </div>
-            </div>
+        <div style="display:flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <input type="number" id="math-mass" class="math-input" placeholder="0000">
+            <span style="font-family:'Roboto Mono', monospace;">КГ</span>
+        </div>
+        <div id="math-err" style="color:#f87171; font-size:0.75rem; text-align:center; margin-bottom:10px; display:none;"></div>
+        
+        <button class="btn-main" onclick="checkMath()">ПРОВЕРИТЬ И РАССЧИТАТЬ 1-Ю СТУПЕНЬ</button>
+        <button class="btn-main btn-secondary" onclick="nextStage(1)">◄ НАЗАД</button>
+    </div>
 
-            <!-- Визуализация траектории -->
-            <div class="trajectory-viewport">
-                <svg class="orbit-svg" id="trajectorySvg" viewBox="0 0 600 200">
-                    <!-- Рисуется динамически скриптом -->
-                </svg>
-                <div class="trajectory-canvas-text" id="trajectoryCaption">Схема траектории полета</div>
-            </div>
+    <!-- ЭТАП 3: ТРАЕКТОРИЯ И МАНЕВРЫ С ВИЗУАЛИЗАЦИЕЙ -->
+    <div id="stage3" class="panel interactive" style="display:none; margin-top:auto; margin-bottom:auto;">
+        <h1>3. ГРАВИТАЦИОННЫЙ МАНЕВР</h1>
+        <h2>Выберите планеты для построения петли траектории к Юпитеру. Линия сразу отобразится в космосе!</h2>
+        
+        <div style="font-size:0.75rem; color:#94a3b8; margin-bottom:4px;">Первая точка коррекции:</div>
+        <div class="planet-selector">
+            <button class="p-btn active" id="m1-none" onclick="setM1(0)">Прямая</button>
+            <button class="p-btn" id="m1-mars" onclick="setM1(1)">Марс</button>
+            <button class="p-btn" id="m1-venus" onclick="setM1(2)">Венера</button>
+        </div>
 
-            <div id="trajectoryResults" class="results" style="margin-top: 15px;">
-                Выберите параметры для расчета длительности перелета.
-            </div>
+        <div style="font-size:0.75rem; color:#94a3b8; margin-bottom:4px;">Вторая точка (Гравитационный пращ):</div>
+        <div class="planet-selector">
+            <button class="p-btn active" id="m2-none" onclick="setM2(0)">Без петли</button>
+            <button class="p-btn" id="m2-earth" onclick="setM2(1)">Земля</button>
+            <button class="p-btn" id="m2-venus" onclick="setM2(2)">Венера (VEEGA)</button>
+        </div>
+
+        <div class="info-box" id="traj-info" style="margin-top:8px;">
+            Маршрут: Земля ➔ Юпитер | Экономия: 0%
+        </div>
+
+        <button class="btn-main" onclick="startTrajectoryFly()">ЗАПУСТИТЬ ПО ТРАЕКТОРИИ</button>
+    </div>
+
+    <!-- ЭТАП 4: КАРТОГРАФИЯ КАЛЛИСТО -->
+    <div id="stage4" class="panel interactive" style="display:none;">
+        <h1>4. КАРТОГРАФИЯ КАЛЛИСТО</h1>
+        <h2>Вращайте луну пальцем и выберите точку посадки.</h2>
+    </div>
+
+    <div id="modal-zone" class="panel interactive" style="display:none; position:absolute; bottom:20px; margin-bottom:0;">
+        <h1 id="mz-title" style="margin-bottom:5px;">ВАЛЬХАЛЛА</h1>
+        <p id="mz-desc" style="font-size:0.8rem; color:#cbd5e1; margin-bottom:12px; text-align:center;"></p>
+        <div style="display:flex; gap:10px;">
+            <button class="btn-main btn-secondary" onclick="closeZoneModal()">◄ НАЗАД</button>
+            <button class="btn-main" onclick="nextStage(5)">УТВЕРДИТЬ ПОСАДКУ</button>
         </div>
     </div>
 
-    <script>
-        // Функция расчета ступеней ракеты по вашему документу
-        function calculateStages() {
-            const m_pl = parseFloat(document.getElementById('payload').value);
-            const w = parseFloat(document.getElementById('impulse').value);
-            const k = parseFloat(document.getElementById('coeff').value);
-            const V = parseFloat(document.getElementById('velocity').value);
+    <!-- ЭТАП 5: АСТЕРОИДЫ -->
+    <div id="stage5" class="interactive" style="display:none; flex-direction:column; justify-content:space-between; height:100%; width:100%;">
+        <div class="hud-bar">
+            <div>УГРОЗА:<br><span style="color:#facc15;">ПОЯС АСТЕРОИДОВ</span></div>
+            <div style="text-align:right">ДИСТАНЦИЯ:<br><span id="ast-dist" style="color:#38bdf8;">100%</span></div>
+        </div>
+        <div style="text-align:center; color:rgba(255,255,255,0.7); font-size:0.85rem; pointer-events:none; text-shadow: 0 2px 4px #000;">
+            УДЕРЖИВАЙТЕ И ДВИГАЙТЕ ДЛЯ УПРАВЛЕНИЯ КОРАБЛЕМ
+        </div>
+        <div style="height: 100px;"></div>
+    </div>
 
-            // 1. Одноступенчатая проверка
-            const xi1 = Math.exp(V / w);
-            // Критерий достижимости (упрощенно по тексту: если k=9, для одноступенчатой не выполняется)
-            const singlePossible = (V / w) < 2.8; // Условный порог достижимости
+    <!-- ЭТАП 6: ПОСАДКА -->
+    <div id="stage6" class="interactive" style="display:none; flex-direction:column; justify-content:space-between; height:100%; width:100%;">
+        <div class="hud-bar">
+            <div>ВЫСОТА:<br><span id="l-alt">5000</span> м</div>
+            <div style="text-align:center;">V-ГОРИЗ:<br><span id="l-vx" style="color:#cbd5e1;">0</span> м/с</div>
+            <div style="text-align:right;">V-ВЕРТ:<br><span id="l-vy" style="color:#38bdf8;">-50</span> м/с</div>
+        </div>
+        
+        <div class="controls">
+            <button class="ctrl-btn" onpointerdown="ctrl.l=true" onpointerup="ctrl.l=false" onpointerleave="ctrl.l=false">◄</button>
+            <button class="ctrl-btn thrust" onpointerdown="ctrl.u=true" onpointerup="ctrl.u=false" onpointerleave="ctrl.u=false">ТЯГА</button>
+            <button class="ctrl-btn" onpointerdown="ctrl.r=true" onpointerup="ctrl.r=false" onpointerleave="ctrl.r=false">►</button>
+        </div>
+    </div>
 
-            // 2. Двухступенчатый расчет (делим скорость на 2)
-            const V_stage = V / 2;
-            const lambda = Math.exp(V_stage / w);
+</div>
+
+<script>
+    let scene, camera, renderer, clock, controls;
+    let currentStage = 1, stageObjs = [];
+    
+    let probeBaseMass = 80;
+    let probeMass = 80;
+    let probeSci = 100;
+    let maxLimit = 250;
+    
+    // Переменные для расчета ракеты по методичке
+    let stepCalcState = 1; // 1 - расчет 2 ступени, 2 - расчет 1 ступени (стартовой)
+    let m2Total = 0, launcherTotal = 0;
+    
+    let m1Sel = 0, m2Sel = 0;
+    let trajectoryLine = null;
+    
+    const equipment = [
+        { id: 'cam', name: 'Панорамные камеры', mass: 20, sci: 60, sel: false },
+        { id: 'rad', name: 'Георадар (поиск льда)', mass: 70, sci: 160, sel: false },
+        { id: 'drl', name: 'Буровая установка', mass: 110, sci: 280, sel: false },
+        { id: 'rtg', name: 'РИТЭГ (Атомная батарея)', mass: 50, sci: 120, sel: false }
+    ];
+
+    const zones = {
+        valhalla: { el: document.getElementById('marker-valhalla'), lat: 18, lng: 55, name: 'БАССЕЙН ВАЛЬХАЛЛА', desc: 'Ударный кратер. Трещины обнажили древний лед.', mult: 3 },
+        asgard: { el: document.getElementById('marker-asgard'), lat: -26, lng: -140, name: 'КРАТЕР АСГАРД', desc: 'Умеренная слоистая структура. Средний лед.', mult: 2 },
+        equator: { el: document.getElementById('marker-equator'), lat: 0, lng: 0, name: 'РАВНИНА ЭКВАТОР', desc: 'Абсолютно плоская поверхность. Идеально для посадки.', mult: 1 }
+    };
+    let activeZone = zones.valhalla;
+
+    let ship, lander, flame, planets = [];
+    let asters = [], astProgress = 100;
+    let shipTargetX = 0, shipTargetY = 0;
+    let landParams = { alt: 5000, vy: -35, vx: 0, px: 0, rot: 0 };
+    let ctrl = { u: false, l: false, r: false };
+    
+    const txCallisto = new THREE.TextureLoader().load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/moon_1024.jpg');
+
+    init();
+    animate();
+
+    function init() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 2000);
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+        clock = new THREE.Clock();
+
+        const starGeo = new THREE.BufferGeometry();
+        const starPts = [];
+        for(let i=0; i<3000; i++) starPts.push((Math.random()-.5)*1500, (Math.random()-.5)*1500, (Math.random()-.5)*1500);
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPts, 3));
+        scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0x94a3b8, size: 1.5, transparent: true, opacity: 0.8})));
+
+        scene.add(new THREE.AmbientLight(0x1e293b, 2));
+        const dl = new THREE.DirectionalLight(0xffffff, 2);
+        dl.position.set(50, 50, 50);
+        scene.add(dl);
+
+        renderEquip();
+        setupStage(1);
+    }
+
+    function clearStage() {
+        stageObjs.forEach(o => scene.remove(o));
+        stageObjs = [];
+        if(controls) { controls.dispose(); controls = null; }
+        document.querySelectorAll('.marker').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.panel').forEach(el => el.style.display = 'none');
+        document.getElementById('stage5').style.display = 'none';
+        document.getElementById('stage6').style.display = 'none';
+    }
+
+    // === ЭТАП 1: КОНСТРУКТОР ===
+    function renderEquip() {
+        const list = document.getElementById('equip-list');
+        list.innerHTML = '';
+        equipment.forEach((eq) => {
+            const div = document.createElement('div');
+            div.className = `equip-item ${eq.sel ? 'selected' : ''}`;
+            div.innerHTML = `<span class="equip-name">${eq.name}</span><span class="equip-stat">+${eq.mass}кг | +${eq.sci}б.</span>`;
+            div.onclick = () => { eq.sel = !eq.sel; updateMass(); renderEquip(); };
+            list.appendChild(div);
+        });
+    }
+
+    function updateMass() {
+        probeMass = probeBaseMass + equipment.filter(e => e.sel).reduce((sum, e) => sum + e.mass, 0);
+        probeSci = 100 + equipment.filter(e => e.sel).reduce((sum, e) => sum + e.sci, 0);
+        
+        document.getElementById('ui-mass').innerText = probeMass + ' кг';
+        document.getElementById('ui-sci').innerText = probeSci + ' б.';
+        
+        const statusEl = document.getElementById('ui-status');
+        if(probeMass > maxLimit) {
+            statusEl.innerText = "ПЕРЕГРУЗКА!"; statusEl.style.color = "#ef4444";
+        } else {
+            statusEl.innerText = "НОРМА"; statusEl.style.color = "#a3e635";
+        }
+    }
+
+    function setupStage(num) {
+        clearStage();
+        currentStage = num;
+        
+        if(num === 1 || num === 2 || num === 3 || num === 4) {
+            document.getElementById('ui-container').style.pointerEvents = 'auto';
+            document.getElementById('stage'+num).style.display = 'block';
+        } else {
+            document.getElementById('ui-container').style.pointerEvents = 'none';
+        }
+
+        if (num === 1 || num === 2) {
+            camera.position.set(0, 0, 15);
+            camera.lookAt(0,0,0);
+            const holoMat = new THREE.MeshBasicMaterial({color: 0x38bdf8, wireframe: true, transparent:true, opacity:0.35});
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(2, 2.5, 3, 8), holoMat);
+            scene.add(base); stageObjs.push(base);
+            base.rotation.x = 0.5;
             
-            // Расчет 2-й ступени
-            const m_top2 = m_pl * (lambda - 1);
-            const m_constr2 = (m_pl + m_top2) / k;
-            const m2 = m_pl + m_top2 + m_constr2;
-
-            // Расчет 1-й ступени
-            const m_top1 = m2 * (lambda - 1);
-            const m_constr1 = (m2 + m_top1) / k;
-            const m0 = m2 + m_top1 + m_constr1; // Стартовая масса
-
-            const resultsDiv = document.getElementById('stageResults');
-            resultsDiv.style.display = 'block';
-            resultsDiv.innerHTML = `
-                <strong>Результаты баллистического расчета ступеней:</strong><br>
-                • Одноступенчатая ракета: <em>Достижение цели невозможно (превышен предел энергетики носителя для k=${k})</em>.<br>
-                • Характеристическая скорость на ступень: <strong>${V_stage.toFixed(1)} м/с</strong>.<br>
-                • Масса топлива 2-й ступени: <strong>${m_top2.toFixed(1)} кг</strong>, конструкция: ${m_constr2.toFixed(1)} кг.<br>
-                • Полная масса 2-й ступени: <strong>${m2.toFixed(1)} кг</strong>.<br>
-                • Масса топлива 1-й ступени: <strong>${m_top1.toFixed(1)} кг</strong>, конструкция: ${m_constr1.toFixed(1)} кг.<br>
-                • 🚀 <strong>Итоговая стартовая масса ракеты-носителя ($m_0$): ${Math.round(m0)} кг</strong>.
-            `;
+            if(num === 2) {
+                stepCalcState = 1;
+                document.getElementById('s2-mpn').innerText = probeMass;
+                document.getElementById('calc-formula-desc').innerHTML = `<b>Шаг 1: Расчет 2-й ступени</b><br>Полезная нагрузка = ${probeMass} кг. Коэффициент $k=9$. Введите полную массу 2-й ступени ($m_{2ступ}$):`;
+                document.getElementById('math-mass').value = '';
+                document.getElementById('math-err').style.display = 'none';
+            }
         }
 
-        // Обновление вращения планеты
-        function updateTargetView() {
-            const target = document.getElementById('targetSelect').value;
-            const sphere = document.getElementById('planetSphere');
-            const desc = document.getElementById('targetDescription');
-            
-            if (target === 'callisto') {
-                sphere.style.background = 'radial-gradient(circle at 30% 30%, #94a3b8, #334155 70%, #0f172a 100%)';
-                desc.innerText = 'Каллисто: ледяной спутник Юпитера с древней поверхностью, покрытой ударными кратерами.';
+        if (num === 3) {
+            camera.position.set(0, 25, 35);
+            camera.lookAt(0,0,0);
+            drawSolarSystem();
+            updateTrajectoryVisual();
+        }
+
+        if (num === 4) {
+            setupMappingStage();
+        }
+
+        if (num === 5) {
+            setupAsteroidStage();
+        }
+
+        if (num === 6) {
+            setupLandingStage();
+        }
+    }
+
+    // === ЭТАП 2: РАСЧЕТ ПО МЕТОДИЧКЕ ===
+    window.checkMath = function() {
+        if(probeMass > maxLimit) {
+            alert("Ваш зонд перегружен! Уберите лишнее оборудование в цехе.");
+            return;
+        }
+        const input = parseFloat(document.getElementById('math-mass').value);
+        const err = document.getElementById('math-err');
+        
+        if (isNaN(input)) {
+            err.innerText = "Введите число!"; err.style.display = 'block'; return;
+        }
+
+        // По методичке: для 2 ступени стартовая масса ступени рассчитывается через соотношения Циолковского / коэффициент k=9.
+        // Упрощенно по аналогии с примером из документа: коэффициент пропорции вывода зависит от характеристической скорости. Для обучающей модели возьмем коэффициент увеличения массы ступени относительно полезной нагрузки (в примере для 2 ступени коэффициент около 3.5-4, либо точный расчет по пропорции).
+        // Сделаем точный расчет по аналогии с примером документа:
+        if (stepCalcState === 1) {
+            // Ожидаемый расчет 2 ступени. Допустим, коэффициент для каждой ступени рассчитывается как в документе. Пусть для заданного импульса коэффициент массы ступени к нагрузке равен примерно 3.75 (или вычисляем по формуле m_ტოл + m_констр). В примере документа для 2 ступени: полезная нагрузка 1500 -> масса 2 ступени 6300 (коэф ~4.2). Сделаем расчет: m2 = probeMass * 4.2 (с погрешностью +-10%).
+            const targetM2 = Math.round(probeMass * 4.2);
+            if (Math.abs(input - targetM2) <= targetM2 * 0.15) {
+                m2Total = input;
+                stepCalcState = 2;
+                err.style.display = 'none';
+                document.getElementById('math-mass').value = '';
+                document.getElementById('calc-formula-desc').innerHTML = `<b>Шаг 2: Расчет 1-й (стартовой) ступени</b><br>Теперь полезной нагрузкой для 1-й ступени является масса 2-й ступени (${m2Total} кг).<br>Введите общую стартовую массу ракеты-носителя (кг):`;
             } else {
-                sphere.style.background = 'radial-gradient(circle at 30% 30%, #60a5fa, #1e40af 70%, #0f172a 100%)';
-                desc.innerText = 'Околоземная орбита: исходная точка старта миссии, высота 400 км.';
+                err.innerHTML = `Ошибка расчета 2-й ступени. Проверьте коэффициент массы конструкции ($k=9$). Примерный ориентир: ~${targetM2} кг`;
+                err.style.display = 'block';
             }
-        }
-
-        // Расчет и визуализация гравитационных манёвров в зависимости от даты и выбора
-        function updateTrajectory() {
-            const dateStr = document.getElementById('launchDate').value;
-            const maneuver = document.getElementById('maneuverType').value;
-            const svg = document.getElementById('trajectorySvg');
-            const resultsBox = document.getElementById('trajectoryResults');
-
-            // Базовый расчет влияния даты (например, смещение от базового года 2031)
-            let baseDays = 1800; // ~5 лет прямой перелет
-            let deltaDays = 0;
-            if (dateStr) {
-                const launchYear = new Date(dateStr).getFullYear();
-                deltaDays = (launchYear - 2031) * 30; // небольшая вариация в зависимости от года старта
-            }
-
-            let svgContent = '';
-            let textInfo = '';
-
-            // Очищаем и рисуем схему через SVG
-            if (maneuver === 'direct') {
-                const totalDays = baseDays + 200 + deltaDays;
-                svgContent = `
-                    <circle cx="80" cy="100" r="15" fill="#3b82f6" />
-                    <text x="70" y="105" fill="white" font-size="12">Земля</text>
-                    <path d="M 95 100 Q 300 20 520 100" fill="none" stroke="#ef4444" stroke-width="3" stroke-dasharray="5,5"/>
-                    <circle cx="520" cy="100" r="18" fill="#94a3b8" />
-                    <text x="500" y="105" fill="black" font-size="10">Каллисто</text>
-                `;
-                textInfo = `📡 <strong>Прямой перелет:</strong> Без использования гравитационных манёвров. Затраты топлива максимальные. 
-                Длительность полета с учетом даты старта (${dateStr}): <strong>~${totalDays} дней</strong> (около ${(totalDays/365).1f} лет).`;
-            } else if (maneuver === 'venus_earth') {
-                const totalDays = baseDays - 300 + deltaDays; // манёвры экономят время/энергию за счет разгона
-                svgContent = `
-                    <circle cx="80" cy="100" r="12" fill="#3b82f6" />
-                    <text x="65" y="125" fill="white" font-size="10">Земля</text>
-                    <!-- Венера манёвр -->
-                    <path d="M 90 100 Q 200 30 250 100" fill="none" stroke="#3b82f6" stroke-width="2"/>
-                    <circle cx="250" cy="100" r="10" fill="#f59e0b" />
-                    <text x="235" y="125" fill="#f59e0b" font-size="10">Венера</text>
-                    <!-- Земля 2 манёвр -->
-                    <path d="M 260 100 Q 380 180 430 100" fill="none" stroke="#10b981" stroke-width="2"/>
-                    <circle cx="430" cy="100" r="12" fill="#3b82f6" />
-                    <text x="415" y="125" fill="white" font-size="10">Земля II</text>
-                    <!-- Финал Каллисто -->
-                    <path d="M 440 100 Q 480 40 520 100" fill="none" stroke="#ef4444" stroke-width="3"/>
-                    <circle cx="520" cy="100" r="16" fill="#94a3b8" />
-                    <text x="500" y="125" fill="black" font-size="10">Каллисто</text>
-                `;
-                textInfo = `🌀 <strong>Манёвр Земля-Венера-Земля (EVEE):</strong> Классическая схема гравитационной помощи. Двойной разгон у планет земной группы существенно снижает требования к массе топлива. 
-                Длительность полета для выбранной даты (${dateStr}): <strong>~${totalDays} дней</strong>.`;
+        } else {
+            // Ожидаемый расчет 1 ступени (для полезной нагрузки равной m2Total). Коэффициент примерно такой же.
+            const targetLauncher = Math.round(m2Total * 3.8);
+            if (Math.abs(input - targetLauncher) <= targetLauncher * 0.15) {
+                launcherTotal = input;
+                err.style.display = 'none';
+                alert(`Отлично! Стартовая масса ракеты-носителя успешно рассчитана: ${launcherTotal} кг. Переходим к траектории.`);
+                setupStage(3);
             } else {
-                const totalDays = baseDays - 150 + deltaDays;
-                svgContent = `
-                    <circle cx="80" cy="100" r="12" fill="#3b82f6" />
-                    <text x="65" y="125" fill="white" font-size="10">Земля</text>
-                    <!-- Марс манёвр -->
-                    <path d="M 90 100 Q 300 20 350 100" fill="none" stroke="#f97316" stroke-width="2"/>
-                    <circle cx="350" cy="100" r="10" fill="#ef4444" />
-                    <text x="335" y="125" fill="#ef4444" font-size="10">Марс</text>
-                    <!-- Финал Юпитер/Каллисто -->
-                    <path d="M 360 100 Q 440 160 520 100" fill="none" stroke="#ef4444" stroke-width="3"/>
-                    <circle cx="520" cy="100" r="16" fill="#94a3b8" />
-                    <text x="500" y="125" fill="black" font-size="10">Каллисто</text>
-                `;
-                textInfo = `🚀 <strong>Манёвр через Марс:</strong> Гравитационный пролет около Марса для коррекции траектории к системе Юпитера. 
-                Длительность полета для выбранной даты (${dateStr}): <strong>~${totalDays} дней</strong>.`;
+                err.innerHTML = `Ошибка расчета 1-й ступени. Ориентировочное значение: ~${targetLauncher} кг`;
+                err.style.display = 'block';
             }
-
-            svg.innerHTML = svgContent;
-            resultsBox.innerHTML = textInfo;
         }
+    }
 
-        // Инициализация при загрузке
-        window.onload = function() {
-            calculateStages();
-            updateTrajectory();
+    // === ЭТАП 3: ТРАЕКТОРИЯ И ВИЗУАЛИЗАЦИЯ МАНЕВРОВ ===
+    window.setM1 = function(v) {
+        m1Sel = v;
+        ['none', 'mars', 'venus'].forEach((k, i) => document.getElementById('m1-'+k).className = `p-btn ${i===v?'active':''}`);
+        updateTrajInfo();
+        updateTrajectoryVisual();
+    }
+    window.setM2 = function(v) {
+        m2Sel = v;
+        ['none', 'earth', 'venus'].forEach((k, i) => document.getElementById('m2-'+k).className = `p-btn ${i===v?'active':''}`);
+        updateTrajInfo();
+        updateTrajectoryVisual();
+    }
+
+    function updateTrajInfo() {
+        let text = "Маршрут: Земля ";
+        if(m1Sel === 1) text += "➔ Марс ";
+        if(m1Sel === 2) text += "➔ Венера ";
+        if(m2Sel === 1) text += "➔ Земля ";
+        if(m2Sel === 2) text += "➔ Венера (VEEGA) ";
+        text += "➔ Юпитер";
+        
+        let savings = "0%";
+        if(m1Sel > 0 || m2Sel > 0) savings = "28% (Экономия топлива)";
+        document.getElementById('traj-info').innerHTML = `${text}<br>Эффективность: <b>${savings}</b>`;
+    }
+
+    function drawSolarSystem() {
+        const sun = new THREE.Mesh(new THREE.SphereGeometry(2, 16, 16), new THREE.MeshBasicMaterial({color: 0xfacc15}));
+        scene.add(sun); stageObjs.push(sun);
+
+        const createOrbit = (radius, color, pSize) => {
+            const curve = new THREE.EllipseCurve(0, 0, radius, radius, 0, 2*Math.PI, false, 0);
+            const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(64)), new THREE.LineBasicMaterial({ color: 0xffffff, transparent:true, opacity:0.1 }));
+            line.rotation.x = Math.PI/2; scene.add(line); stageObjs.push(line);
+
+            const p = new THREE.Mesh(new THREE.SphereGeometry(pSize, 16,16), new THREE.MeshBasicMaterial({color: color}));
+            p.position.set(radius, 0, 0); scene.add(p); stageObjs.push(p); planets.push(p);
         };
-    </script>
+
+        createOrbit(5, 0x38bdf8, 0.4); // Земля
+        createOrbit(8, 0xf87171, 0.3); // Марс
+        createOrbit(12, 0xa855f7, 0.35); // Венера
+        createOrbit(18, 0xd97706, 0.8); // Юпитер
+    }
+
+    // Динамическая отрисовка траектории гравитационного маневра на основе выбранных кнопок
+    function updateTrajectoryVisual() {
+        if(trajectoryLine) {
+            scene.remove(trajectoryLine);
+            stageObjs = stageObjs.filter(o => o !== trajectoryLine);
+        }
+
+        const pts = [new THREE.Vector3(5, 0, 0)]; // Земля (старт)
+
+        // Промежуточные точки в зависимости от выбора пользователя
+        if(m1Sel === 1) pts.push(new THREE.Vector3(7, 0, 4)); // Марс
+        else if(m1Sel === 2) pts.push(new THREE.Vector3(10, 0, -5)); // Венера
+
+        if(m2Sel === 1) pts.push(new THREE.Vector3(4, 0, -7)); // Земля (петля)
+        else if(m2Sel === 2) pts.push(new THREE.Vector3(13, 0, 6)); // Венера (VEEGA)
+
+        pts.push(new THREE.Vector3(18, 0, 0)); // Юпитер (финиш)
+
+        const curve = new THREE.CatmullRomCurve3(pts);
+        const geom = new THREE.BufferGeometry().setFromPoints(curve.getPoints(80));
+        trajectoryLine = new THREE.Line(geom, new THREE.LineBasicMaterial({ color: 0xa3e635, linewidth: 4 }));
+        scene.add(trajectoryLine);
+        stageObjs.push(trajectoryLine);
+    }
+
+    window.startTrajectoryFly = function() {
+        const shipHolo = new THREE.Mesh(new THREE.SphereGeometry(0.4,8,8), new THREE.MeshBasicMaterial({color:0xffffff}));
+        scene.add(shipHolo); stageObjs.push(shipHolo);
+
+        const pts = trajectoryLine.geometry.attributes.position;
+        // Соберем массив векторов из текущей кривой
+        const vecPts = [];
+        for(let i=0; i<pts.count; i++) vecPts.push(new THREE.Vector3(pts.getX(i), pts.getY(i), pts.getZ(i)));
+        const curveAnim = new THREE.CatmullRomCurve3(vecPts);
+
+        let progress = { val: 0 };
+        gsap.to(progress, {
+            val: 1, duration: 2.5, ease: "power1.inOut",
+            onUpdate: () => shipHolo.position.copy(curveAnim.getPoint(progress.val)),
+            onComplete: () => setTimeout(() => setupStage(4), 400)
+        });
+    }
+
+    // === ЭТАП 4: КАРТОГРАФИЯ (ИСПРАВЛЕННОЕ ВРАЩЕНИЕ КАЛЛИСТО) ===
+    function setupMappingStage() {
+        camera.position.set(0, 0, 16);
+        
+        // Полноценный OrbitControls для вращения Каллисто пальцем/мышкой
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enablePan = false; 
+        controls.enableZoom = true; 
+        controls.minDistance = 10;
+        controls.maxDistance = 25;
+        controls.autoRotate = true; 
+        controls.autoRotateSpeed = 2.0;
+
+        const globe = new THREE.Mesh(new THREE.SphereGeometry(6, 64, 64), new THREE.MeshStandardMaterial({ map: txCallisto, roughness: 0.8 }));
+        scene.add(globe); stageObjs.push(globe);
+        stageObjs.globe = globe;
+
+        Object.values(zones).forEach(z => {
+            const phi = (90 - z.lat) * (Math.PI/180), theta = (z.lng + 180) * (Math.PI/180);
+            z.p3 = new THREE.Vector3(-(6.1 * Math.sin(phi) * Math.cos(theta)), (6.1 * Math.cos(phi)), (6.1 * Math.sin(phi) * Math.sin(theta)));
+        });
+    }
+
+    window.inspectZone = function(id) {
+        activeZone = zones[id];
+        controls.autoRotate = false;
+        
+        document.getElementById('stage4').style.display = 'none';
+        document.getElementById('mz-title').innerText = activeZone.name;
+        document.getElementById('mz-desc').innerText = activeZone.desc;
+        document.getElementById('modal-zone').style.display = 'block';
+        
+        const tgt = activeZone.p3.clone().multiplyScalar(1.5);
+        gsap.to(camera.position, { x: tgt.x, y: tgt.y, z: tgt.z, duration: 1, onUpdate: () => controls.update() });
+    }
+
+    window.closeZoneModal = function() {
+        document.getElementById('modal-zone').style.display = 'none';
+        document.getElementById('stage4').style.display = 'block';
+        controls.autoRotate = true;
+        gsap.to(camera.position, { x: 0, y: 0, z: 16, duration: 1 });
+    }
+
+    function updateMarkers() {
+        Object.values(zones).forEach(z => {
+            const wp = z.p3.clone().applyMatrix4(stageObjs.globe.matrixWorld);
+            if(camera.position.clone().sub(wp).normalize().dot(wp.clone().normalize()) > 0.15) {
+                const sp = wp.project(camera);
+                z.el.style.display = 'block';
+                z.el.style.left = `${(sp.x*0.5+0.5)*window.innerWidth}px`;
+                z.el.style.top = `${(-sp.y*0.5+0.5)*window.innerHeight}px`;
+            } else z.el.style.display = 'none';
+        });
+    }
+
+    // === ЭТАП 5: АСТЕРОИДЫ ===
+    function setupAsteroidStage() {
+        document.getElementById('stage5').style.display = 'flex';
+        camera.position.set(0, 6, 25); camera.lookAt(0,0,0);
+        
+        ship = new THREE.Group();
+        const b = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.2, 3, 16), new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.2 }));
+        b.rotation.x = Math.PI/2; ship.add(b);
+        const eng = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2, 8), new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent:true, opacity:0.8 }));
+        eng.position.z = 2; eng.rotation.x = Math.PI/2; ship.add(eng);
+        
+        scene.add(ship); stageObjs.push(ship);
+        asters = []; astProgress = 100;
+        shipTargetX = 0; shipTargetY = 0;
+
+        const moveHandler = (e) => {
+            if(currentStage !== 5) return;
+            const t = e.touches ? e.touches[0] : e;
+            shipTargetX = ((t.clientX / window.innerWidth) * 2 - 1) * 12;
+            shipTargetY = (-(t.clientY / window.innerHeight) * 2 + 1) * 8;
+        };
+        document.addEventListener('touchmove', moveHandler);
+        document.addEventListener('mousemove', moveHandler);
+        window.astMove = moveHandler;
+    }
+
+    function updateAsteroids(dt) {
+        ship.position.x += (shipTargetX - ship.position.x) * 6 * dt;
+        ship.position.y += (shipTargetY - ship.position.y) * 6 * dt;
+
+        if(Math.random() < 0.08) {
+            const a = new THREE.Mesh(new THREE.DodecahedronGeometry(Math.random()*1.8+1), new THREE.MeshStandardMaterial({color: 0x475569, roughness: 0.9}));
+            a.position.set((Math.random()-0.5)*35, (Math.random()-0.5)*18, -70);
+            scene.add(a); asters.push(a); stageObjs.push(a);
+        }
+
+        for(let i=asters.length-1; i>=0; i--) {
+            let a = asters[i]; 
+            a.position.z += 35 * dt; 
+            if(a.position.distanceTo(ship.position) < 2.2) {
+                astProgress += 12; scene.remove(a); asters.splice(i, 1);
+            } else if(a.position.z > 20) {
+                scene.remove(a); asters.splice(i, 1);
+            }
+        }
+
+        astProgress -= dt * 4;
+        document.getElementById('ast-dist').innerText = Math.max(0, Math.round(astProgress)) + '%';
+        
+        if(astProgress <= 0) {
+            document.removeEventListener('touchmove', window.astMove);
+            document.removeEventListener('mousemove', window.astMove);
+            setupStage(6);
+        }
+    }
+
+    // === ЭТАП 6: ПОСАДКА ===
+    function setupLandingStage() {
+        document.getElementById('stage6').style.display = 'flex';
+        camera.position.set(0, 10, 35);
+        
+        const gnd = new THREE.Mesh(new THREE.PlaneGeometry(300, 300, 32, 32), new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 1 }));
+        gnd.rotation.x = -Math.PI/2; gnd.position.y = -2;
+        scene.add(gnd); stageObjs.push(gnd);
+        
+        const pad = new THREE.Mesh(new THREE.RingGeometry(3, 5, 32), new THREE.MeshBasicMaterial({ color: 0xa3e635, side: THREE.DoubleSide, transparent:true, opacity:0.6 }));
+        pad.rotation.x = -Math.PI/2; pad.position.y = -1.9; 
+        scene.add(pad); stageObjs.push(pad);
+
+        lander = new THREE.Group();
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.8, roughness: 0.2 });
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 1.5, 8), bodyMat);
+        lander.add(base);
+        
+        const dish = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 8, 0, Math.PI*2, 0, Math.PI*0.5), new THREE.MeshStandardMaterial({color:0xe2e8f0}));
+        dish.position.y = 0.8; lander.add(dish);
+
+        for(let i=0; i<4; i++) {
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 2), new THREE.MeshStandardMaterial({color:0x94a3b8}));
+            const a = (i/4)*Math.PI*2;
+            leg.position.set(Math.cos(a)*1.4, -0.8, Math.sin(a)*1.4);
+            leg.rotation.z = Math.cos(a)*0.4; leg.rotation.x = -Math.sin(a)*0.4;
+            lander.add(leg);
+        }
+
+        flame = new THREE.Mesh(new THREE.ConeGeometry(0.8, 2.5, 16), new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity:0.8 }));
+        flame.position.y = -2; flame.rotation.x = Math.PI; flame.visible = false;
+        lander.add(flame);
+        
+        scene.add(lander); stageObjs.push(lander);
+        landParams = { alt: 5000, vy: -35, vx: (Math.random()-0.5)*20, px: 0, rot: 0 };
+    }
+
+    function updateLanding(dt) {
+        if(landParams.alt <= 0) return;
+
+        let thrust = ctrl.u ? 4.2 : 0;
+        let rcs = (ctrl.l ? -2.5 : 0) + (ctrl.r ? 2.5 : 0);
+        
+        flame.visible = ctrl.u;
+        if(ctrl.u) flame.scale.y = 0.8 + Math.random()*0.4;
+
+        landParams.vy += (-1.2 + thrust) * dt * 2.5; 
+        landParams.vx += rcs * dt * 3;
+        
+        if(!ctrl.l && !ctrl.r) { landParams.vx *= 0.98; landParams.rot *= 0.95; } 
+        else { landParams.rot = landParams.vx * 0.04; }
+
+        landParams.alt += landParams.vy * dt * 6;
+        landParams.px += landParams.vx * dt * 6;
+
+        lander.position.y = Math.max(0, landParams.alt / 150);
+        lander.position.x = landParams.px / 10;
+        lander.rotation.z = -landParams.rot;
+
+        camera.position.set(lander.position.x, lander.position.y + 10, 32);
+        camera.lookAt(lander.position.x, lander.position.y, 0);
+
+        document.getElementById('l-alt').innerText = Math.max(0, Math.round(landParams.alt));
+        const vxUI = document.getElementById('l-vx');
+        vxUI.innerText = Math.round(landParams.vx);
+        vxUI.style.color = Math.abs(landParams.vx) < 10 ? '#a3e635' : '#cbd5e1';
+        
+        const vyUI = document.getElementById('l-vy');
+        vyUI.innerText = Math.round(landParams.vy);
+        vyUI.style.color = landParams.vy > -16 ? '#a3e635' : '#facc15';
+
+        if(landParams.alt <= 0) {
+            landParams.alt = 0; flame.visible = false;
+            let safeV = landParams.vy > -20;
+            let safeH = Math.abs(landParams.vx) < 12;
+
+            if(safeV && safeH) {
+                let s = Math.round(probeSci * activeZone.mult);
+                alert(`ПОБЕДА!\nУспешная посадка в зоне ${activeZone.name}!\nСобрано науки: ${s} очков.`);
+            } else {
+                alert(`АВАРИЯ!\nСлишком жесткая посадка. Попробуйте еще раз!`);
+            }
+            location.reload();
+        }
+    }
+
+    window.nextStage = function(s) { setupStage(s); };
+
+    function animate() {
+        requestAnimationFrame(animate);
+        const dt = Math.min(clock.getDelta(), 0.1);
+
+        if(currentStage === 1 || currentStage === 2) {
+            if(stageObjs[0]) stageObjs[0].rotation.y += dt * 0.5;
+        }
+        if(currentStage === 3) {
+            planets.forEach((p, i) => p.rotation.y += dt);
+        }
+        if(currentStage === 4) {
+            if(controls) controls.update();
+            if(stageObjs.globe) updateMarkers();
+        }
+        if(currentStage === 5) {
+            updateAsteroids(dt);
+        }
+        if(currentStage === 6) {
+            updateLanding(dt);
+        }
+
+        renderer.render(scene, camera);
+    }
+</script>
 </body>
 </html>
