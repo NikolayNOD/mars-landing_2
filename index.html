@@ -2,222 +2,167 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Миссия Каллисто — научная экспедиция</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Каллисто: Инженерный вызов</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;-webkit-user-select:none;user-select:none}
-html,body{width:100%;height:100%;overflow:hidden;background:#020611;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-button{font:inherit}
-#app{position:fixed;inset:0;background:radial-gradient(circle at 50% 20%,#102243 0,#040914 45%,#01040a 100%)}
-#canvas{position:absolute;inset:0;z-index:1;touch-action:none}
-#hud{position:absolute;inset:0;z-index:5;pointer-events:none}
-.pointer{pointer-events:auto}
-.topbar{position:absolute;left:12px;right:12px;top:10px;display:flex;align-items:center;gap:8px}
-.titlebox{flex:1;background:rgba(4,10,22,.72);backdrop-filter:blur(14px);border:1px solid rgba(90,210,255,.25);border-radius:15px;padding:10px 12px;box-shadow:0 8px 30px #0008}
-.title{font-size:12px;letter-spacing:1px;color:#7dd3fc;font-weight:800}.subtitle{font-size:10px;color:#a9b7c9;margin-top:2px}
-.score{background:rgba(4,10,22,.78);border:1px solid rgba(250,204,21,.35);border-radius:15px;padding:9px 12px;font-size:12px;font-weight:800;color:#fde68a;white-space:nowrap}
-.bottom{position:absolute;left:0;right:0;bottom:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));
-background:linear-gradient(180deg,rgba(2,6,16,0),rgba(2,6,16,.88) 18%,rgba(2,6,16,.97));pointer-events:none}
-.sheet{max-width:560px;margin:0 auto;background:rgba(7,13,28,.90);backdrop-filter:blur(18px);border:1px solid rgba(96,210,255,.28);border-radius:22px;padding:13px;box-shadow:0 -8px 38px #000b;pointer-events:auto;max-height:46dvh;overflow:auto}
-.grab{width:36px;height:4px;border-radius:3px;background:#3a506a;margin:0 auto 9px}
-.sheet h2{font-size:16px;color:#dff7ff}.sheet p{font-size:11px;line-height:1.45;color:#aebdce;margin-top:5px}
-.btnrow{display:flex;gap:7px;margin-top:10px}.btn{flex:1;border:0;border-radius:12px;padding:12px 10px;background:linear-gradient(135deg,#0891b2,#2563eb);color:white;font-weight:800;font-size:12px;box-shadow:0 5px 15px #0ea5e944}.btn.alt{background:rgba(255,255,255,.07);border:1px solid #334155;box-shadow:none}.btn.good{background:linear-gradient(135deg,#059669,#0f766e)}.btn.warn{background:linear-gradient(135deg,#d97706,#b45309)}.btn:active{transform:scale(.98)}
-.pills{display:flex;gap:7px;overflow:auto;padding:8px 0 2px}.pill{flex:0 0 auto;border:1px solid #29435a;background:rgba(255,255,255,.04);border-radius:999px;padding:7px 10px;font-size:10px;color:#c5d4e5}.pill.active{border-color:#38bdf8;background:#0ea5e933;color:#e0f2fe}
-.route{display:flex;align-items:center;gap:6px;overflow:auto;padding:7px 0}.node{flex:0 0 auto;background:#0b2036;border:1px solid #1e5a7a;border-radius:9px;padding:6px 9px;font-size:10px;color:#dff7ff}.arrow{color:#5eead4;font-size:12px}
-.feedback{font-size:11px;line-height:1.35;margin-top:7px;padding:9px;border-radius:10px;background:rgba(255,255,255,.035);border:1px solid #1f3448}
-.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.choice{border:1px solid #243a50;background:rgba(255,255,255,.035);border-radius:11px;padding:9px;cursor:pointer}.choice.active{border-color:#38bdf8;background:#082c3b}.choice b{font-size:11px}.choice span{display:block;color:#8fa3b8;font-size:9px;margin-top:3px;line-height:1.3}
-.full{position:absolute;inset:0;z-index:8;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(2,6,15,.84);backdrop-filter:blur(10px)}
-.modal{width:min(520px,100%);background:rgba(7,13,28,.95);border:1px solid #24506a;border-radius:22px;padding:17px;box-shadow:0 20px 50px #000b}.modal h3{font-size:18px;color:#7dd3fc}.modal p{font-size:12px;line-height:1.5;color:#c1cfdf;margin-top:8px}.modal .science{margin-top:10px;padding:10px;border-radius:12px;background:#0a1727;border:1px solid #20384f}.science b{color:#f7d774}.science span{display:block;color:#b6c7d8;font-size:11px;margin-top:4px;line-height:1.45}
-#markerLayer{position:absolute;inset:0;z-index:4;pointer-events:none}.marker{position:absolute;transform:translate(-50%,-50%);display:none;pointer-events:auto}.marker button{animation:pulse 1.8s infinite; border:1px solid #59d4ff;background:rgba(4,10,20,.92);color:#e9fbff;padding:7px 9px;border-radius:12px;box-shadow:0 0 18px #38bdf855;font-size:10px;white-space:nowrap}.marker button small{display:inline-block;color:#6ee7b7;margin-left:4px;font-size:9px}.marker.selected button{background:#67e8f9;color:#05202a;border-color:#cffafe;font-weight:900}
-#toast{position:absolute;left:50%;top:72px;transform:translateX(-50%) translateY(-12px);opacity:0;z-index:20;background:rgba(3,10,20,.92);border:1px solid #2b566f;border-radius:999px;padding:8px 12px;font-size:11px;pointer-events:none;transition:.25s;white-space:nowrap}
-#reticle{position:absolute;left:50%;top:47%;width:70px;height:70px;transform:translate(-50%,-50%);border:1px dashed #67e8f9;opacity:.25;border-radius:50%;pointer-events:none}
-.hudline{display:flex;justify-content:space-between;gap:7px;margin-top:6px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:#7dd3fc}.hudline span:last-child{color:#e2e8f0}
-.controlrow{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:8px;margin-top:9px}.control{height:48px;border-radius:13px;border:1px solid #2c5166;background:#091728;color:#def7ff;font-weight:900;font-size:12px}.control.thrust{background:linear-gradient(135deg,#b45309,#ea580c);border-color:#fb923c}.control:active{transform:scale(.97)}
-.ephem-table{width:100%;border-collapse:collapse;margin-top:9px;font-size:10px}.ephem-table th,.ephem-table td{padding:7px 5px;border-bottom:1px solid #1d3244;text-align:left}.ephem-table th{color:#7dd3fc}.ephem-table td{color:#c6d2df}
-@keyframes pulse{0%,100%{box-shadow:0 0 12px #38bdf844,0 0 0 0 #38bdf822}50%{box-shadow:0 0 22px #38bdf8aa,0 0 0 7px #38bdf800}}.hidden{display:none!important}
-@media (min-width:700px){.sheet{max-width:650px;max-height:40dvh}.title{font-size:14px}.sheet h2{font-size:18px}.sheet p{font-size:12px}.btn{font-size:13px}}
+    /* Визуальный стиль «Sci-Fi Terminal» */
+    body { 
+        background-color: #0b0c10; /* Темная космическая тема */
+        color: #00f3ff; /* Бирюзовый для систем */
+        font-family: 'Courier New', Courier, monospace; /* Шрифты в стиле консолей */
+        padding: 20px; 
+    }
+    .container { 
+        border: 2px solid #00f3ff; 
+        box-shadow: 0 0 15px #00f3ff; 
+        padding: 20px; 
+        max-width: 600px; 
+        margin: auto; 
+    }
+    h1, h3 { text-align: center; text-transform: uppercase; }
+    
+    /* Неоновые акценты */
+    .warning { color: #ffaa00; } /* Оранжевый для предупреждений */
+    .success { color: #39ff14; } /* Кислотно-зеленый для успешных расчетов */
+    
+    /* Живые графики */
+    .bar-container { 
+        background: #1f2833; 
+        height: 25px; 
+        border: 1px solid #00f3ff; 
+        margin-bottom: 20px; 
+        position: relative;
+    }
+    .bar { 
+        height: 100%; 
+        width: 0%; 
+        background: #00f3ff; 
+        transition: width 0.3s ease-in-out, background-color 0.3s; 
+    }
+    .bar.energy-ok { background: #39ff14; }
+    
+    /* Красная тревога и пульсация */
+    .bar.overload { 
+        background: red; 
+        animation: pulse 1s infinite; 
+    }
+    @keyframes pulse { 
+        0% { opacity: 1; } 
+        50% { opacity: 0.3; } 
+        100% { opacity: 1; } 
+    }
+    
+    .btn { 
+        background: #1f2833; 
+        color: #00f3ff; 
+        border: 1px solid #00f3ff; 
+        padding: 10px 15px; 
+        cursor: pointer; 
+        margin: 5px; 
+        font-family: 'Courier New', Courier, monospace;
+        font-weight: bold;
+        transition: 0.2s;
+    }
+    .btn:hover { background: #00f3ff; color: #0b0c10; box-shadow: 0 0 10px #00f3ff; }
+    .btn-reset { border-color: #ffaa00; color: #ffaa00; }
+    .btn-reset:hover { background: #ffaa00; color: #0b0c10; box-shadow: 0 0 10px #ffaa00; }
+    
+    #ai-console { 
+        border-left: 4px solid #00f3ff; 
+        padding: 10px; 
+        margin: 20px 0; 
+        background: rgba(0, 243, 255, 0.05);
+        min-height: 40px;
+    }
+    .inventory { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 15px; }
 </style>
 </head>
 <body>
-<div id="app"><div id="canvas"></div><div id="markerLayer"></div><div id="reticle"></div>
-<div id="hud">
-  <div class="topbar"><div class="titlebox"><div class="title">МИССИЯ КАЛЛИСТО</div><div id="stageTitle" class="subtitle">1 / 5 · Выбор научной точки</div></div><div class="score">НАУКА <span id="score">0</span></div></div>
-  <div id="bottom" class="bottom"></div>
+
+<div class="container">
+    <h1>Каллисто: Инженерный вызов</h1>
+    
+    <div id="ai-console">
+        <strong>АЛЬФА:</strong> Добро пожаловать, инженер. Ожидаю сборку модулей аппарата.
+    </div>
+
+    <h3>Модуль 2: Конструктор аппарата</h3>
+    
+    <div>Масса аппарата: <span id="mass-text" class="success">0</span> / 60 кг</div>
+    <div class="bar-container">
+        <div id="mass-bar" class="bar"></div>
+    </div>
+
+    <div>Энергобаланс (Генерация/Потребление): <span id="energy-text" class="success">0</span></div>
+    <div class="bar-container">
+        <div id="energy-bar" class="bar energy-ok"></div>
+    </div>
+
+    <h3 style="margin-top: 30px;">Палитра приборов:</h3>
+    <div class="inventory">
+        <button class="btn" onclick="addComponent('Камера', 5, -2)">Камера (5кг, -2 эн.)</button>
+        <button class="btn" onclick="addComponent('Глубокий бур', 20, -10)">Глубокий бур (20кг, -10 эн.)</button>
+        <button class="btn" onclick="addComponent('РИТЭГ', 15, 15)">РИТЭГ (15кг, +15 эн.)</button>
+        <button class="btn btn-reset" onclick="resetShip()">Сброс сборки</button>
+    </div>
 </div>
-<div id="toast"></div>
-<div id="modalLayer" class="full"><div class="modal" id="modalContent"></div></div>
-</div>
+
 <script>
-const APP={
- stage:1, score:0, zone:null, route:['Земля'], rocket:'heavy', asteroidData:0,
- dragging:false, landed:false,
- zones:{
-  valhalla:{id:'valhalla',name:'Вальхалла',lat:16,lng:-55,pts:140,tag:'ДРЕВНИЙ МНОГОКОЛЬЦЕВОЙ БАССЕЙН',desc:'Огромная многокольцевая ударная структура. Центральная светлая область связана с материалом, богатым льдом.',task:'Исследовать следы гигантского удара и сравнить яркую центральную область с окружающим рельефом.',equipment:'Радар + камера помогут изучить структуру и рельеф; бур добавит локальный образец.'},
-  asgard:{id:'asgard',name:'Асгард',lat:30,lng:-142,pts:120,tag:'МНОГОКОЛЬЦЕВАЯ СТРУКТУРА',desc:'Одна из крупнейших структур Каллисто: светлая центральная зона окружена разорванными кольцами и уступами.',task:'Изучить деформацию ледяной коры вокруг древнего бассейна.',equipment:'Спектрометр + камера полезны для сравнения светлой области и окружающего материала; радар — для структуры.'},
-  burr:{id:'burr',name:'Бурр',lat:39,lng:-145,pts:155,tag:'МОЛОДОЙ ЛУЧИСТЫЙ КРАТЕР',desc:'Сравнительно молодой яркий кратер на северной части Асгарда. Хорошая точка для сравнения свежего удара с древним рельефом.',task:'Изучить молодые выбросы и контрастировать их с сильно разрушенной поверхностью.',equipment:'Камера и спектрометр — лучший учебный набор для ярких выбросов и их состава.'},
-  doh:{id:'doh',name:'Дох',lat:27,lng:-142,pts:170,tag:'КУПОЛЬНЫЙ КРАТЕР',desc:'Кратер в светлых центральных равнинах Асгарда. Его форма помогает обсуждать поведение ледяной коры после удара.',task:'Проверить форму центрального поднятия и характер окружающей поверхности.',equipment:'Камера + радар позволят сравнить форму купола и скрытую структуру под поверхностью.'}
- }
-};
-let scene,camera,renderer,controls,clock;
-let globe,starfield,sun,ship,lander,ground,targetPad;
-let markerEls={}; let zoneVectors={}; let routePlanets={}; let trajectory=null; let trajectoryPoints=[];
-let asteroids=[]; let landing={alt:4200,vy:-34,x:0,vx:0,time:0};
-let ctrl={left:false,right:false,thrust:false};
-const TEX={callisto:'procedural'};
+    let currentMass = 0;
+    let currentEnergy = 0;
+    const maxMass = 60;
 
-function $(id){return document.getElementById(id)}
-function toast(s){const e=$('toast');e.textContent=s;e.style.opacity=1;e.style.transform='translateX(-50%) translateY(0)';clearTimeout(window._tt);window._tt=setTimeout(()=>{e.style.opacity=0;e.style.transform='translateX(-50%) translateY(-12px)'},1800)}
-function setStageTitle(t){$('stageTitle').textContent=t}
-function addScore(n,reason){APP.score+=n;$('score').textContent=APP.score;toast((n>0?'+':'')+n+' науч. баллов · '+reason)}
+    function addComponent(name, mass, energy) {
+        currentMass += mass;
+        currentEnergy += energy;
+        updateInterface();
+    }
 
-// ---------- Procedural Callisto texture (self-contained; no generic Moon texture) ----------
-function makeCallistoTexture(){
- const c=document.createElement('canvas');c.width=1024;c.height=512;const ctx=c.getContext('2d');
- const g=ctx.createLinearGradient(0,0,0,512);g.addColorStop(0,'#566066');g.addColorStop(.38,'#574f4b');g.addColorStop(.7,'#463f3d');g.addColorStop(1,'#2b3034');ctx.fillStyle=g;ctx.fillRect(0,0,1024,512);
- // mottled terrain
- for(let i=0;i<2600;i++){const x=Math.random()*1024,y=Math.random()*512,r=Math.random()*8+1;const v=45+Math.random()*70;ctx.fillStyle=`rgba(${v+25},${v+18},${v+15},${Math.random()*.22})`;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
- // dark/bright impact patches
- function crater(x,y,r,bright=false){const rg=ctx.createRadialGradient(x-r*.12,y-r*.15,0,x,y,r);if(bright){rg.addColorStop(0,'rgba(240,240,226,.92)');rg.addColorStop(.48,'rgba(175,178,170,.55)');rg.addColorStop(.8,'rgba(48,43,43,.2)');rg.addColorStop(1,'rgba(0,0,0,0)')}else{rg.addColorStop(0,'rgba(15,18,21,.65)');rg.addColorStop(.55,'rgba(45,40,39,.35)');rg.addColorStop(1,'rgba(0,0,0,0)')}ctx.fillStyle=rg;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
- for(let i=0;i<180;i++)crater(Math.random()*1024,Math.random()*512,Math.random()*10+2,Math.random()<.08);
- // Valhalla and Asgard mapped as stylized multi-ring structures
- function basin(x,y,r,core){for(let k=4;k>=1;k--){ctx.strokeStyle=`rgba(205,210,200,${.22-.035*k})`;ctx.lineWidth=4+2*k;ctx.beginPath();ctx.arc(x,y,r*(.25+.17*k),0,Math.PI*2);ctx.stroke()}ctx.fillStyle='rgba(230,231,220,.42)';ctx.beginPath();ctx.arc(x,y,r*core,0,Math.PI*2);ctx.fill()}
- // map projection approximate: lon -> x, lat -> y
- function xy(lat,lng){return [((lng+180)/360)*1024,(90-lat)/180*512]}
- let [vx,vy]=xy(16,-55);basin(vx,vy,90,.32); let [ax,ay]=xy(30,-142);basin(ax,ay,55,.30);
- for(let i=0;i<14;i++){let a=Math.random()*Math.PI*2;let rr=65+Math.random()*60;crater(vx+Math.cos(a)*rr,vy+Math.sin(a)*rr,3+Math.random()*7,false)}
- for(let i=0;i<8;i++){let a=Math.random()*Math.PI*2;let rr=35+Math.random()*35;crater(ax+Math.cos(a)*rr,ay+Math.sin(a)*rr,3+Math.random()*5,true)}
- return new THREE.CanvasTexture(c);
-}
-const callistoTex=makeCallistoTexture();
+    function resetShip() {
+        currentMass = 0;
+        currentEnergy = 0;
+        updateInterface();
+    }
 
-function init(){
- scene=new THREE.Scene();clock=new THREE.Clock();
- camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,.05,2000);
- renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));renderer.setSize(innerWidth,innerHeight);renderer.outputEncoding=THREE.sRGBEncoding;$('canvas').appendChild(renderer.domElement);
- scene.add(new THREE.AmbientLight(0x9fb9d0,1.5));const dl=new THREE.DirectionalLight(0xffffff,2.2);dl.position.set(10,8,10);scene.add(dl);
- makeStars();window.addEventListener('resize',resize); setupStage1(); animate();
-}
-function makeStars(){const geo=new THREE.BufferGeometry(),a=[];for(let i=0;i<3000;i++)a.push((Math.random()-.5)*1500,(Math.random()-.5)*1500,(Math.random()-.5)*1500);geo.setAttribute('position',new THREE.Float32BufferAttribute(a,3));starfield=new THREE.Points(geo,new THREE.PointsMaterial({color:0x9fd9ff,size:1.1,sizeAttenuation:true}));scene.add(starfield)}
-function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}
-function clearScene(){[...scene.children].forEach(o=>{if(o!==starfield && o.type!=='AmbientLight' && o.type!=='DirectionalLight')scene.remove(o)});asteroids=[];routePlanets={};trajectory=null;trajectoryPoints=[];controls?.dispose();controls=null;markerEls={};$('markerLayer').innerHTML='';}
+    function updateInterface() {
+        // Обновление текста
+        document.getElementById('mass-text').innerText = currentMass;
+        document.getElementById('energy-text').innerText = currentEnergy;
 
+        const aiConsole = document.getElementById('ai-console');
+        const massBar = document.getElementById('mass-bar');
+        const energyBar = document.getElementById('energy-bar');
 
-// ---------- Stage 1: 3D Callisto / site selection ----------
-function setupStage1(){
- APP.stage=1; setStageTitle('1 / 5 · Вращай Каллисто и выбирай научную точку'); clearScene();
- globe=new THREE.Mesh(new THREE.SphereGeometry(5.2,96,64),new THREE.MeshStandardMaterial({map:callistoTex,roughness:.92,metalness:.02}));scene.add(globe);
- camera.position.set(0,0,13);
- controls=new THREE.OrbitControls(camera,renderer.domElement);controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.08;controls.rotateSpeed=.58;controls.minDistance=7.5;controls.maxDistance=18;controls.target.set(0,0,0);
- Object.values(APP.zones).forEach(z=>{zoneVectors[z.id]=latLngVector(z.lat,z.lng,5.25);const el=document.createElement('div');el.className='marker';el.innerHTML=`<button>${z.name}<small>• +${z.pts}</small></button>`;el.onclick=e=>{e.stopPropagation();inspectZone(z.id)};$('markerLayer').appendChild(el);markerEls[z.id]=el});
- $('reticle').style.display='none';
- $('bottom').innerHTML=`<div class="sheet"><div class="grab"></div><h2>🪐 Карта Каллисто</h2><p><b>Сначала смотри, потом решай.</b> Крути Каллисто пальцем, приближай поверхность. Нажми на светящийся маркер, чтобы узнать, что именно можно исследовать в этой области.</p><div id="siteHint" class="feedback">Пока точка не выбрана.</div><div class="btnrow"><button class="btn alt" onclick="openEphem()">📚 Эфемерида</button><button id="zoneNext" class="btn" disabled onclick="confirmZone()">Выбрать точку</button></div></div>`;
-}
-function latLngVector(lat,lng,r){const phi=(90-lat)*Math.PI/180,theta=(lng+180)*Math.PI/180;return new THREE.Vector3(-(r*Math.sin(phi)*Math.cos(theta)),r*Math.cos(phi),r*Math.sin(phi)*Math.sin(theta))}
-function updateMarkers(){if(APP.stage!==1||!globe)return;Object.values(APP.zones).forEach(z=>{const v=zoneVectors[z.id].clone().applyMatrix4(globe.matrixWorld);const view=camera.position.clone().sub(v).normalize();const normal=v.clone().normalize();const dot=view.dot(normal);const p=v.clone().project(camera);const el=markerEls[z.id];if(dot>.02&&p.z<1){el.style.display='block';el.style.left=((p.x*.5+.5)*innerWidth)+'px';el.style.top=((-p.y*.5+.5)*innerHeight)+'px';el.classList.toggle('selected',APP.zone?.id===z.id)}else el.style.display='none'})}
-function inspectZone(id){
- APP.zone=APP.zones[id]; const v=zoneVectors[id].clone().normalize(); const target=v.clone().multiplyScalar(0);
- const cam=v.clone().multiplyScalar(9.1); gsap.to(camera.position,{x:cam.x,y:cam.y,z:cam.z,duration:1.05,ease:'power3.inOut',onUpdate:()=>{camera.lookAt(target)}});
- $('siteHint').innerHTML=`<b>${APP.zone.name}</b> · ${APP.zone.tag}<br>${APP.zone.desc}<br><span style="color:#67e8b6">Научная задача:</span> ${APP.zone.task}<br><span style="color:#f7d56b">Награда: +${APP.zone.pts} научных баллов</span><br><span style="color:#93c5fd">Совет по оборудованию:</span> ${APP.zone.equipment}`;
- $('zoneNext').disabled=false; toast('Камера приближает выбранную область');
-}
-function confirmZone(){if(!APP.zone)return;addScore(20,'за выбор научной цели');setupStage2()}
+        // Логика Массы
+        let massPercent = (currentMass / maxMass) * 100;
+        massBar.style.width = Math.min(massPercent, 100) + '%';
 
-// ---------- Ephemeris lesson ----------
-function openEphem(){
- $('modalLayer').style.display='flex';$('modalContent').innerHTML=`<h3>Эфемерида: «где и когда находится тело»</h3><p><b>Эфемерида</b> — это рассчитанное представление положения и скорости небесного тела в зависимости от времени. То есть вместо «планета где-то здесь» мы задаём: <b>в такой-то момент времени она находится вот здесь и движется с такой-то скоростью</b>.</p><div class="science"><b>Почему это важно для миссии?</b><span>Планеты не стоят на месте. Пока аппарат летит к Юпитеру, Земля, Венера, Марс и сам Юпитер продолжают двигаться. Поэтому навигатору нужен не только рисунок орбит, но и время: момент старта, положение цели и время импульса.</span></div><div class="science"><b>Учебная модель</b><span>Зелёная траектория ниже не является реальным навигационным решением. Игра использует упрощённые орбиты, чтобы показать саму идею: <b>траектория = пространство + время</b>.</span></div><table class="ephem-table"><tr><th>В момент t</th><th>Положение</th><th>Скорость</th></tr><tr><td>Земля</td><td>x, y, z</td><td>v(t)</td></tr><tr><td>Юпитер</td><td>x, y, z</td><td>v(t)</td></tr><tr><td>Каллисто</td><td>x, y, z</td><td>v(t)</td></tr></table><div class="btnrow"><button class="btn" onclick="closeModal()">Понятно</button></div>`;
-}
-function closeModal(){$('modalLayer').style.display='none'}
+        if (currentMass > maxMass) {
+            massBar.classList.add('overload');
+            document.getElementById('mass-text').className = 'warning';
+            // Саркастичный комментарий ИИ при превышении веса
+            aiConsole.innerHTML = '<strong class="warning">АЛЬФА:</strong> <span class="warning">Шеф, с таким весом мы даже с орбиты Земли не улетим. Срочно сбрасываем балласт!</span>';
+        } else {
+            massBar.classList.remove('overload');
+            document.getElementById('mass-text').className = 'success';
+            aiConsole.innerHTML = '<strong>АЛЬФА:</strong> Установка прошла успешно. Системы в норме.';
+        }
 
-// ---------- Stage 2: payload / spacecraft builder ----------
-APP.equipment=APP.equipment||{};
-APP.equipmentCatalog=[
- {id:'drill',name:'Бур',mass:18,power:55,icon:'⛏️',desc:'Берём керн и изучаем состав приповерхностного слоя.',zones:['valhalla','doh']},
- {id:'spectro',name:'Спектрометр',mass:12,power:80,icon:'🔬',desc:'Ищем минералогические и ледяные признаки по спектру.',zones:['asgard','burr']},
- {id:'radar',name:'Радар',mass:22,power:105,icon:'📡',desc:'Исследуем структуру под поверхностью.',zones:['valhalla','asgard','doh']},
- {id:'camera',name:'Камера',mass:8,power:35,icon:'📷',desc:'Строим детальную панораму рельефа и следим за посадкой.',zones:['valhalla','burr','doh']},
- {id:'rtg',name:'РИТЭГ',mass:28,power:-210,icon:'⚡',desc:'Источник электричества для длительной работы приборов.',zones:['valhalla','asgard','burr','doh']}
-];
-function setupStage2(){
- APP.stage=2; setStageTitle('2 / 5 · Собери научный аппарат'); clearScene();
- camera.position.set(0,1.2,11);camera.lookAt(0,1,0);
- APP.equipment={};
- ship=createScienceLander();scene.add(ship);
- renderEquipmentSheet();
-}
-function createScienceLander(){const g=new THREE.Group();const body=new THREE.Mesh(new THREE.CylinderGeometry(1.25,1.45,1.6,12),new THREE.MeshStandardMaterial({color:0xd7b15a,metalness:.55,roughness:.35}));g.add(body);const deck=new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.1,.16,12),new THREE.MeshStandardMaterial({color:0x9fb3c7,metalness:.5}));deck.position.y=.85;g.add(deck);const dish=new THREE.Mesh(new THREE.CylinderGeometry(.45,.55,.22,24),new THREE.MeshStandardMaterial({color:0xf8fafc,metalness:.3}));dish.rotation.z=.2;dish.position.set(0,1.25,.1);g.add(dish);for(let i=0;i<4;i++){const a=i*Math.PI/2,leg=new THREE.Mesh(new THREE.CylinderGeometry(.07,.08,1.3),new THREE.MeshStandardMaterial({color:0x64748b}));leg.position.set(Math.cos(a)*1.1,-1.1,Math.sin(a)*1.1);leg.rotation.z=Math.cos(a)*.28;leg.rotation.x=-Math.sin(a)*.28;g.add(leg)}g.userData.attachments={};return g}
-function attachEquipment(item){
- if(APP.equipment[item.id])delete APP.equipment[item.id]; else APP.equipment[item.id]=item;
- updateEquipmentVisual();renderEquipmentSheet();
-}
-function updateEquipmentVisual(){if(!ship)return;Object.values(ship.userData.attachments||{}).forEach(o=>ship.remove(o));ship.userData.attachments={};const items=Object.values(APP.equipment);items.forEach((it,i)=>{let o;if(it.id==='camera'){o=new THREE.Mesh(new THREE.BoxGeometry(.35,.28,.28),new THREE.MeshStandardMaterial({color:0x111827}));o.position.set(1.1,(i%2)*.5,.7)}else if(it.id==='radar'){o=new THREE.Mesh(new THREE.TorusGeometry(.45,.08,10,24),new THREE.MeshStandardMaterial({color:0x93c5fd,metalness:.6}));o.position.set(-.1,1.25,.3);o.rotation.x=.5}else if(it.id==='drill'){o=new THREE.Mesh(new THREE.CylinderGeometry(.12,.18,.75,10),new THREE.MeshStandardMaterial({color:0x8b5e34,metalness:.45}));o.position.set(-1.2,.5,0);o.rotation.z=Math.PI/2}else if(it.id==='spectro'){o=new THREE.Mesh(new THREE.BoxGeometry(.55,.25,.35),new THREE.MeshStandardMaterial({color:0x22d3ee,metalness:.4}));o.position.set(1.15,.3,0)}else{o=new THREE.Mesh(new THREE.BoxGeometry(.8,.32,.6),new THREE.MeshStandardMaterial({color:0xf59e0b,metalness:.6}));o.position.set(0,-.05,-1.0)}ship.add(o);ship.userData.attachments[it.id]=o})}
-function equipmentStats(){let mass=0,power=0;Object.values(APP.equipment).forEach(i=>{mass+=i.mass;power+=i.power});return {mass,power}}
-function equipmentScore(){if(!APP.zone)return 0;return Object.values(APP.equipment).reduce((n,i)=>n+(i.zones.includes(APP.zone.id)?18:-4),0)}
-function renderEquipmentSheet(){const st=equipmentStats();const cap=80;let hint='';if(st.mass>cap)hint='<span style="color:#f87171">⚠️ Масса выше учебного лимита 80 кг.</span>';else if(equipmentScore()>=36)hint='<span style="color:#6ee7b7">✅ Набор хорошо подходит для выбранной научной задачи.</span>';else hint='<span style="color:#fde68a">💡 Сравни приборы с тем, что ты хочешь исследовать.</span>';
- $('bottom').innerHTML=`<div class="sheet"><div class="grab"></div><h2>🛰️ Конструктор аппарата · ${APP.zone.name}</h2><p>Нажимай на приборы. Детали физически добавляются на 3D-модель. Следи за <b>массой</b> и <b>энергией</b>.</p><div class="mini-grid">${APP.equipmentCatalog.map(it=>`<div class="choice ${APP.equipment[it.id]?'active':''}" onclick='attachEquipment(APP.equipmentCatalog.find(x=>x.id==="${it.id}"))'><b>${it.icon} ${it.name}</b><span>${it.desc}<br>${it.mass} кг · ${it.power<0?'−':'+'}${Math.abs(it.power)} Вт</span></div>`).join('')}</div><div class="hudline"><span>МПН</span><span>${st.mass} / ${cap} кг</span></div><div class="hudline"><span>ЭНЕРГИЯ</span><span>${st.power} Вт net</span></div><div class="feedback">${hint}</div><div class="btnrow"><button class="btn alt" onclick="setupStage1()">← Каллисто</button><button class="btn" onclick="confirmEquipment()">Рассчитать носитель →</button></div></div>`}
-function confirmEquipment(){const st=equipmentStats();if(st.mass>80){toast('Сначала уменьши массу полезной нагрузки');return}addScore(Math.max(10,equipmentScore()),'за состав научного комплекса');setupStage3()}
-
-// ---------- Stage 3: launcher + rocket equation ----------
-function setupStage3(){APP.stage=3;setStageTitle('3 / 5 · Рассчитай и выбери носитель');clearScene();camera.position.set(0,2.5,15);camera.lookAt(0,1,0);const model=createRocket();scene.add(model);renderRocketSheet();}
-function createRocket(){const g=new THREE.Group();const core=new THREE.Mesh(new THREE.CylinderGeometry(.62,.75,6.0,18),new THREE.MeshStandardMaterial({color:0xe5e7eb,metalness:.65,roughness:.25}));g.add(core);const nose=new THREE.Mesh(new THREE.ConeGeometry(.75,1.7,18),new THREE.MeshStandardMaterial({color:0xdbeafe,metalness:.5}));nose.position.y=3.85;g.add(nose);for(const x of[-1.35,1.35]){const b=new THREE.Mesh(new THREE.CylinderGeometry(.38,.48,5.4,14),new THREE.MeshStandardMaterial({color:0x94a3b8,metalness:.55}));b.position.x=x;g.add(b)}for(let y=-2.7;y<-2.0;y+=.25){const f=new THREE.Mesh(new THREE.ConeGeometry(.3,.8,10),new THREE.MeshBasicMaterial({color:0x38bdf8,transparent:true,opacity:.7}));f.position.set(0,y-.7,0);g.add(f)}g.userData.rocketClass=APP.rocket;return g}
-function openRocketCalc(){const st=equipmentStats();$('modalLayer').style.display='flex';$('modalContent').innerHTML=`<h3>🚀 Мини-калькулятор ступени</h3><p><b>Уравнение Циолковского:</b> Δv = vₑ · ln(m₀ / m₁).</p><div class="science"><b>Что здесь происходит?</b><span>Чем больше отношение начальной массы к конечной, тем больше доступное Δv. Удельный импульс определяет, насколько эффективно двигатель превращает запас рабочего тела в изменение скорости.</span></div><div class="hudline"><span>Полезная нагрузка</span><span>${st.mass} кг</span></div><div class="hudline"><span>Учебное Δv миссии</span><span>≈ 12.0 км/с</span></div><p style="font-size:10px;color:#8da2b7">Значения ниже — учебные. Они помогают понять зависимость, а не являются характеристиками реальной ракеты.</p><div class="btnrow"><button class="btn" onclick="closeModal()">Понятно</button></div>`}
-function pickRocket(x,el){APP.rocket=x;document.querySelectorAll('#bottom .choice').forEach(c=>c.classList.remove('active'));el.classList.add('active');const mass=equipmentStats().mass;let text=x==='medium'&&mass>45?'⚠️ Для этой массы запас небольшой.':x==='heavy'?'✅ Хороший компромисс для учебной миссии.':'🟢 Большой запас по полезной нагрузке, но система тяжелее.';$('rocketFeedback').innerHTML=text;addScore(8,'за выбор класса носителя')}
-function renderRocketSheet(){const mass=equipmentStats().mass;$('bottom').innerHTML=`<div class="sheet"><div class="grab"></div><h2>🚀 Ракета-носитель</h2><p>Сначала проверь связь <b>массы полезной нагрузки</b> и требуемого Δv. Затем выбери класс носителя. Справа/сверху — 3D-сравнение ракеты.</p><div class="feedback">МПН = <b>${mass} кг</b> · Учебное требование миссии: <b>≈ 12 км/с</b></div><div class="mini-grid"><div class="choice ${APP.rocket==='medium'?'active':''}" onclick="pickRocket('medium',this)"><b>Средний класс</b><span>Меньше запаса. Ошибки маршрута дороже.</span></div><div class="choice ${APP.rocket==='heavy'?'active':''}" onclick="pickRocket('heavy',this)"><b>Тяжёлый класс</b><span>Баланс массы и запаса.</span></div><div class="choice ${APP.rocket==='superheavy'?'active':''}" onclick="pickRocket('superheavy',this)"><b>Сверхтяжёлый</b><span>Большой запас для тяжёлого аппарата.</span></div><div class="choice" onclick="openRocketCalc()"><b>ƒ(формула)</b><span>Открыть формулу Циолковского</span></div></div><div id="rocketFeedback" class="feedback">Выбрано: ${APP.rocket==='heavy'?'тяжёлый':'сверхтяжёлый'} класс.</div><div class="btnrow"><button class="btn alt" onclick="setupStage2()">← Аппарат</button><button class="btn" onclick="setupStage4()">Строить траекторию →</button></div></div>`}
-
-// ---------- Stage 4: trajectory / gravity assists / asteroid belt ----------
-function setupStage4(){APP.stage=4;setStageTitle('4 / 5 · Построй 3D-траекторию и лети через пояс');clearScene();camera.position.set(0,30,34);camera.lookAt(0,0,0);$('reticle').style.display='none';
- sun=new THREE.Mesh(new THREE.SphereGeometry(2.1,32,32),new THREE.MeshBasicMaterial({color:0xfbbf24}));scene.add(sun);sun.add(new THREE.PointLight(0xffe29a,4,130));
- routePlanets={};[['Венера',7,0xeab308,.75],['Земля',11,0x38bdf8,.82],['Марс',15,0xef4444,.68],['Юпитер',22,0xd97706,1.45]].forEach(([name,r,col,size],i)=>{const ring=new THREE.Mesh(new THREE.RingGeometry(r-.02,r+.02,128),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.2,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;scene.add(ring);const m=new THREE.Mesh(new THREE.SphereGeometry(size,24,16),new THREE.MeshStandardMaterial({color:col,roughness:.55}));scene.add(m);routePlanets[name]={r,mesh:m,angle:i*.7,col}});
- trajectory=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0x22d3ee,transparent:true,opacity:.92}));scene.add(trajectory);renderTrajectorySheet();}
-function renderTrajectorySheet(){
- $('bottom').innerHTML=`<div class="sheet"><div class="grab"></div><h2>🌌 Планировщик траектории</h2><p>Сверху видна <b>движущаяся Солнечная система</b>. Выбирай последовательность пролётов. Траектория рисуется между текущими положениями тел, чтобы было видно идею гравитационного манёвра.</p><div id="routeDisplay" class="route"></div><div class="pills"><button class="pill" onclick="addNode('Венера')">+ Венера</button><button class="pill" onclick="addNode('Земля')">+ Земля</button><button class="pill" onclick="addNode('Марс')">+ Марс</button><button class="pill" onclick="addNode('Юпитер')">→ Юпитер</button></div><div id="routeFeedback" class="feedback">Подсказка: не всегда самый прямой путь — самый экономичный по Δv.</div><div class="btnrow"><button class="btn alt" onclick="resetRoute()">Сброс</button><button class="btn" onclick="checkRoute()">Зафиксировать →</button></div></div>`;drawRoute();evaluateRoute()}
-function drawRoute(){const r=$('routeDisplay');r.innerHTML='';APP.route.forEach((x,i)=>{if(i){const a=document.createElement('span');a.className='arrow';a.textContent='→';r.appendChild(a)}const n=document.createElement('span');n.className='node';n.textContent=x;r.appendChild(n)})}
-function addNode(name){if(APP.route.length>=5||APP.route.at(-1)==='Юпитер')return;APP.route.push(name);drawRoute();evaluateRoute();addScore(3,'за вариант маршрута')}
-function resetRoute(){APP.route=['Земля'];drawRoute();evaluateRoute()}
-function evaluateRoute(){const p=APP.route.join('-');let text='Добавь планету и наблюдай, как меняется траектория.',color='#cbd5e1',bonus=0;if(p==='Земля-Венера-Земля-Юпитер'){text='🟢 Сильный учебный вариант: VEEGA показывает серию гравитационных пролётов. Траектория считается хорошей для обсуждения экономии Δv.';color='#6ee7b7';bonus=30}else if(p==='Земля-Земля-Юпитер'){text='🟡 Рабочий вариант. Повторный пролёт Земли помогает обсудить зависимость манёвра от скорости и геометрии.';color='#fde68a';bonus=15}else if(p==='Земля-Венера-Юпитер'||p==='Земля-Марс-Юпитер'){text='🟡 Допустимо, но сравни время полёта и число манёвров с альтернативами.';color='#fbbf24';bonus=12}else if(APP.route.at(-1)==='Юпитер'){text='🟠 Маршрут есть. Сравни его с VEEGA — ты увидишь, что «короче на картинке» не всегда означает «легче для ракеты». ';color='#fb923c';bonus=5}$('routeFeedback').textContent=text;$('routeFeedback').style.color=color;window.routeBonus=bonus}
-function checkRoute(){if(APP.route.at(-1)!=='Юпитер'){toast('Заверши маршрут у Юпитера');return}if(window.routeBonus)addScore(window.routeBonus,'за оценку траектории');startAsteroidTransit()}
-function updateTrajectory(){if(!trajectory)return;const pts=APP.route.map(n=>routePlanets[n]?.mesh.position.clone()).filter(Boolean);if(pts.length>=2){const curve=new THREE.CatmullRomCurve3(pts);trajectory.geometry.dispose();trajectory.geometry=new THREE.BufferGeometry().setFromPoints(curve.getPoints(90))}}
-function startAsteroidTransit(){
- // brief interstitial flight through the belt, then landing
- setupBeltMini();
-}
-function setupBeltMini(){APP.stage=4;setStageTitle('4 / 5 · Пояс астероидов · быстрый научный пролёт');clearScene();camera.position.set(0,1.5,24);camera.lookAt(0,0,0);ship=createShip();scene.add(ship);window.beltT=0;window.scanN=0;window.autopilot=false;window._beltFail=false;
- for(let i=0;i<30;i++){const a=createAsteroid();a.position.set((Math.random()-.5)*24,(Math.random()-.5)*13,-20-Math.random()*100);a.userData.speed=8+Math.random()*8;scene.add(a);asteroids.push(a)}
- $('bottom').innerHTML=`<div class="sheet"><div class="grab"></div><h2>☄️ Быстрый пролёт пояса</h2><p>Не стреляем: научная миссия получает данные через <b>сканирование</b>. Веди аппарат пальцем, уклоняйся и собери 3 скана.</p><div class="hudline"><span>СКАНЫ</span><span id="scanCount">0 / 3</span></div><div class="hudline"><span>ПРОГРЕСС</span><span id="beltProgress">0%</span></div><div class="controlrow"><button class="control" id="scanBtn">🔎 Скан</button><button class="control thrust" id="boostBtn">🚀 Импульс</button><button class="control" onclick="toggleAutoPilot()">◈ Авто</button></div></div>`;
- const move=e=>{if(APP.stage!==4)return;const t=e.touches?e.touches[0]:e;const x=t.clientX/innerWidth*2-1;const y=-(t.clientY/innerHeight)*2+1;gsap.to(ship.position,{x:x*10,y:y*6,duration:.16})};renderer.domElement.ontouchmove=move;renderer.domElement.onmousemove=e=>{if(e.buttons)move(e)};$('scanBtn').onclick=scanAsteroid;$('boostBtn').onpointerdown=()=>window.boost=true;$('boostBtn').onpointerup=()=>window.boost=false;
-}
-function createShip(){const g=new THREE.Group();const b=new THREE.Mesh(new THREE.CylinderGeometry(.4,.65,2.5,10),new THREE.MeshStandardMaterial({color:0xe2e8f0,metalness:.7}));b.rotation.x=Math.PI/2;g.add(b);const nose=new THREE.Mesh(new THREE.ConeGeometry(.55,.8,16),new THREE.MeshStandardMaterial({color:0xfbbf24,metalness:.7}));nose.rotation.x=Math.PI/2;nose.position.z=1.6;g.add(nose);const p=new THREE.Mesh(new THREE.BoxGeometry(2.6,.05,.7),new THREE.MeshStandardMaterial({color:0x2563eb,metalness:.3}));g.add(p);return g}
-function createAsteroid(){const a=new THREE.Mesh(new THREE.DodecahedronGeometry(.5+Math.random()*.9,1),new THREE.MeshStandardMaterial({color:0x68737b,roughness:1,flatShading:true}));return a}
-function scanAsteroid(){if(APP.stage!==4)return;let target=null,d=99;asteroids.forEach(a=>{const q=a.position.distanceTo(ship.position);if(q<3&&q<d){target=a;d=q}});if(!target){toast('Подлети ближе к астероиду');return}target.material.emissive=new THREE.Color(0x164e63);target.userData.scanned=true;window.scanN++;$('scanCount').textContent=window.scanN+' / 3';addScore(25,'за спектральный скан');if(window.scanN>=3)toast('3 научных образца собраны')}
-function toggleAutoPilot(){window.autopilot=!window.autopilot;toast(window.autopilot?'Автопилот включён':'Ручное управление')}
-
-// ---------- Stage 5: Callisto orbital capture + landing ----------
-function setupStage5(){APP.stage=5;setStageTitle('5 / 5 · Орбита Каллисто → торможение → посадка');clearScene();$('reticle').style.display='none';globe=new THREE.Mesh(new THREE.SphereGeometry(6.2,80,56),new THREE.MeshStandardMaterial({map:callistoTex,roughness:.94}));scene.add(globe);camera.position.set(0,3,18);camera.lookAt(0,0,0);ship=createShip();ship.scale.set(.45,.45,.45);scene.add(ship);window.orbitT=0;window.deorbit=false;
- const target=latLngVector(APP.zone.lat,APP.zone.lng,6.3);const marker=new THREE.Mesh(new THREE.SphereGeometry(.16,12,8),new THREE.MeshBasicMaterial({color:0x67e8f9}));marker.position.copy(target);globe.add(marker);window.targetMarker=marker;
- $('bottom').innerHTML=`<div class="sheet"><div class="grab"></div><h2>🛰️ Выход на орбиту Каллисто</h2><p id="orbitText">Аппарат совершает облёт. Выбранная научная точка — <b>${APP.zone.name}</b>. Нажми тормозной импульс в удобный момент; затем начнётся короткий управляемый спуск.</p><div class="hudline"><span>ЦЕЛЬ</span><span>${APP.zone.name}</span></div><div class="btnrow"><button class="btn warn" onclick="beginDeorbit()">🔥 Тормозной импульс</button></div></div>`;
-}
-function beginDeorbit(){window.deorbit=true;addScore(12,'за решение по моменту торможения');$('orbitText').textContent='Тормозной импульс выполнен. Сход с орбиты ускорен для мастер-класса — впереди управление посадкой.';setTimeout(setupLanding,1200)}
-function setupLanding(){APP.stage=5;clearScene();setStageTitle('5 / 5 · Управляемая посадка в '+APP.zone.name);$('reticle').style.display='none';const groundGeo=new THREE.PlaneGeometry(80,80,48,48);ground=new THREE.Mesh(groundGeo,new THREE.MeshStandardMaterial({map:callistoTex,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-2.3;scene.add(ground);for(let i=0;i<110;i++){const c=new THREE.Mesh(new THREE.CircleGeometry(.08+Math.random()*.5,10),new THREE.MeshBasicMaterial({color:0x252525}));c.rotation.x=-Math.PI/2;c.position.set((Math.random()-.5)*42,-2.25,(Math.random()-.5)*42);scene.add(c)}targetPad=new THREE.Group();const ring=new THREE.Mesh(new THREE.RingGeometry(2.2,2.55,40),new THREE.MeshBasicMaterial({color:0x22d3ee,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;targetPad.add(ring);const inner=new THREE.Mesh(new THREE.CircleGeometry(1.15,32),new THREE.MeshBasicMaterial({color:0x0e7490,transparent:true,opacity:.3}));inner.rotation.x=-Math.PI/2;targetPad.add(inner);targetPad.position.set(0,-2.17,0);scene.add(targetPad);lander=createLander();scene.add(lander);landing={alt:3100,vy:-28,x:APP.zone.id==='burr'?22:APP.zone.id==='doh'?-16:10,vx:0,time:0};camera.position.set(0,5,18);camera.lookAt(0,0,0);$('bottom').innerHTML=`<div class="sheet"><div class="grab"></div><h2>🛬 Посадка: ${APP.zone.name}</h2><p>Цель — погасить вертикальную скорость и удержать аппарат над выбранной зоной.</p><div class="hudline"><span>ВЫСОТА</span><span id="alt">3100 м</span></div><div class="hudline"><span>V ВЕРТ.</span><span id="vvert">−28 м/с</span></div><div class="hudline"><span>ОТКЛОНЕНИЕ</span><span id="off">${Math.abs(Math.round(landing.x))} м</span></div><div class="controlrow"><button class="control" ontouchstart="ctrl.left=true" ontouchend="ctrl.left=false" onmousedown="ctrl.left=true" onmouseup="ctrl.left=false">◀</button><button class="control thrust" ontouchstart="ctrl.thrust=true" ontouchend="ctrl.thrust=false" onmousedown="ctrl.thrust=true" onmouseup="ctrl.thrust=false">🔥 ТЯГА</button><button class="control" ontouchstart="ctrl.right=true" ontouchend="ctrl.right=false" onmousedown="ctrl.right=true" onmouseup="ctrl.right=false">▶</button></div><div class="btnrow"><button class="btn alt" onclick="setupLanding()">↻ Быстрый повтор</button></div></div>`}
-function createLander(){const g=new THREE.Group();const base=new THREE.Mesh(new THREE.CylinderGeometry(.8,1.05,.8,10),new THREE.MeshStandardMaterial({color:0xd97706,metalness:.6,roughness:.3}));g.add(base);const cap=new THREE.Mesh(new THREE.SphereGeometry(.58,18,12,0,Math.PI*2,0,Math.PI*.7),new THREE.MeshStandardMaterial({color:0xf1f5f9}));cap.position.y=.55;g.add(cap);for(let i=0;i<4;i++){const a=i*Math.PI/2,leg=new THREE.Mesh(new THREE.CylinderGeometry(.045,.06,1.2),new THREE.MeshStandardMaterial({color:0x94a3b8}));leg.position.set(Math.cos(a)*.9,-.6,Math.sin(a)*.9);leg.rotation.z=Math.cos(a)*.3;leg.rotation.x=-Math.sin(a)*.3;g.add(leg)}const flame=new THREE.Mesh(new THREE.ConeGeometry(.18,.8,10),new THREE.MeshBasicMaterial({color:0xf97316,transparent:true,opacity:.8}));flame.position.y=-.8;flame.visible=false;g.add(flame);g.userData.flame=flame;return g}
-function landingUpdate(dt){if(!lander)return;const grav=-.68,thrust=ctrl.thrust?2.55:0,side=(ctrl.left?-1:0)+(ctrl.right?1:0);landing.vy+=(grav+thrust)*dt*9;landing.vx+=side*1.8*dt;landing.alt+=landing.vy*dt*6;landing.x+=landing.vx*dt*4;landing.alt=Math.max(0,landing.alt);lander.position.y=landing.alt/300;lander.position.x=landing.x/21;lander.position.z=1.7+landing.alt/420;lander.rotation.z=-landing.vx*.08;lander.userData.flame.visible=ctrl.thrust;$('alt').textContent=Math.round(landing.alt)+' м';$('vvert').textContent=(landing.vy<0?'−':'')+Math.abs(Math.round(landing.vy))+' м/с';$('off').textContent=Math.abs(Math.round(landing.x))+' м';$('vvert').style.color=landing.vy<-16?'#f87171':'#6ee7b7';if(landing.alt<=0){lander.position.y=0;if(Math.abs(landing.vy)>17||Math.abs(landing.x)>40)finish(false);else finish(true)}}
-function finish(ok){if(ok){APP.landed=true;addScore(APP.zone.pts,'за посадку в выбранной научной зоне');showFinish(true)}else showFinish(false)}
-function showFinish(ok){$('modalLayer').style.display='flex';$('modalContent').innerHTML=ok?`<h3>🎉 Мягкая посадка!</h3><p>Ты села именно туда, куда выбрала в начале: <b>${APP.zone.name}</b>.</p><div class="science"><b>Что исследуем</b><span>${APP.zone.task}</span></div><div class="science"><b>Научный отчёт</b><span>Точка: ${APP.zone.name}<br>Приборы: ${Object.values(APP.equipment).map(x=>x.name).join(', ')||'не выбраны'}<br>Маршрут: ${APP.route.join(' → ')}<br>Итог: ${APP.score} баллов</span></div><div class="btnrow"><button class="btn good" onclick="closeModal();setupStage1()">Новая экспедиция</button></div>`:`<h3>⚠️ Жёсткое касание</h3><p>Нужно уменьшить вертикальную скорость и удержать аппарат ближе к центру выбранной зоны.</p><div class="science"><b>Попробуй ещё</b><span>Тяга тормозит падение, а лево/право помогает совместить аппарат с кольцом.</span></div><div class="btnrow"><button class="btn warn" onclick="closeModal();setupLanding()">Ещё одна попытка</button></div>`}
-
-// ---------- Main loop ----------
-function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.05);if(controls)controls.update();
- if(APP.stage===1){if(globe)globe.rotation.y+=dt*.018;updateMarkers()}
- if(APP.stage===4 && routePlanets && Object.keys(routePlanets).length){for(const p of Object.values(routePlanets)){p.angle+=dt*(.22*(20/p.r));p.mesh.position.set(Math.cos(p.angle)*p.r,0,Math.sin(p.angle)*p.r)}updateTrajectory();}
- if(APP.stage===4 && ship && asteroids.length){window.beltT=(window.beltT||0)+dt;let progress=Math.min(100,window.beltT*12);if($('beltProgress'))$('beltProgress').textContent=Math.floor(progress)+'%';asteroids.forEach(a=>{a.position.z+=(a.userData.speed||12)*dt;if(a.position.z>30){a.position.z=-80-Math.random()*70;a.position.x=(Math.random()-.5)*24;a.position.y=(Math.random()-.5)*13}if(a.position.distanceTo(ship.position)<1.55 && !window._beltFail){window._beltFail=true;addScore(-15,'столкновение');$('modalLayer').style.display='flex';$('modalContent').innerHTML=`<h3>☄️ Столкновение</h3><p>Аппарат задел астероид. Для мастер-класса даём второй шанс.</p><div class="btnrow"><button class="btn warn" onclick="window._beltFail=false;closeModal();setupBeltMini()">Повторить</button></div>`}});if(progress>=100){setupStage5()}}
- if(APP.stage===5 && lander)landingUpdate(dt);
- if(window.orbitT!==undefined && APP.stage===5 && ship && !lander){window.orbitT+=dt*.55;const r=8.4;ship.position.set(Math.cos(window.orbitT)*r,0,Math.sin(window.orbitT)*r);ship.rotation.y=-window.orbitT;}
- renderer.render(scene,camera)}
-
-window.openEphem=openEphem;window.closeModal=closeModal;window.inspectZone=inspectZone;window.confirmZone=confirmZone;window.attachEquipment=attachEquipment;window.confirmEquipment=confirmEquipment;window.setupStage1=setupStage1;window.setupStage2=setupStage2;window.setupStage3=setupStage3;window.setupStage4=setupStage4;window.setupStage5=setupStage5;window.openRocketCalc=openRocketCalc;window.pickRocket=pickRocket;window.addNode=addNode;window.resetRoute=resetRoute;window.checkRoute=checkRoute;window.scanAsteroid=scanAsteroid;window.toggleAutoPilot=toggleAutoPilot;window.beginDeorbit=beginDeorbit;window.setupLanding=setupLanding;
-
-init();
-window.openEphem=openEphem;window.closeModal=closeModal;window.inspectZone=inspectZone;window.confirmZone=confirmZone;window.addNode=addNode;window.resetRoute=resetRoute;window.checkRoute=checkRoute;window.setupStage2=setupStage2;window.setupStage4=setupStage4;window.setupStage5=setupStage5;window.beginDeorbit=beginDeorbit;window.setupLanding=setupLanding;window.restartLanding=restartLanding;window.pickRocket=pickRocket;window.showRocketHint=showRocketHint;window.toggleAutoPilot=toggleAutoPilot;
+        // Логика Энергии
+        if (currentEnergy < 0) {
+            // Если батарея разряжается быстрее, чем генерируют РИТЭГи
+            energyBar.style.width = '100%';
+            energyBar.classList.remove('energy-ok');
+            energyBar.classList.add('overload');
+            document.getElementById('energy-text').className = 'warning';
+        } else {
+            energyBar.style.width = Math.min((currentEnergy / 30) * 100, 100) + '%';
+            energyBar.classList.remove('overload');
+            energyBar.classList.add('energy-ok');
+            document.getElementById('energy-text').className = 'success';
+        }
+    }
 </script>
+
 </body>
 </html>
