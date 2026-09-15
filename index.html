@@ -570,8 +570,9 @@
             <div style="text-align:right">ДИСТАНЦИЯ:<br><span id="ast-dist" style="color:#38bdf8; font-weight:700;">100%</span></div>
         </div>
         
-        <div style="text-align:center; color:#e2e8f0; font-size:0.85rem; pointer-events:none; text-shadow: 0 2px 8px #000; font-weight:700; background:rgba(0,0,0,0.5); padding:8px 16px; border-radius:20px; margin: 0 auto;">
-            👈 ТАЩИТЕ ПАЛЕЦ ДЛЯ МАНЕВРИРОВАНИЯ 👉
+        <div style="text-align:center; color:#e2e8f0; font-size:0.85rem; pointer-events:none; text-shadow: 0 2px 8px #000; font-weight:700; background:rgba(0,0,0,0.5); padding:8px 16px; border-radius:20px; margin: 0 auto; display: flex; flex-direction: column; gap: 4px;">
+            <span>👈 ТАЩИТЕ ПАЛЕЦ ДЛЯ МАНЕВРИРОВАНИЯ 👉</span>
+            <span style="color:#38bdf8; font-size: 0.75rem;">АВТОМАТИЧЕСКИЙ ОГОНЬ АКТИВИРОВАН 🔥</span>
         </div>
         <div style="height: 60px;"></div>
     </div>
@@ -604,7 +605,7 @@
 
         <div style="font-size:0.75rem; color:#94a3b8; text-align:center;">Полученные награды:</div>
         <div class="badge-grid">
-            <div class="badge-item"><div class="b-icon">📐</div><b>Инженер</b><br>Расчет ракеты</div>
+            <div class="badge-item"><div class="b-icon">📐</div><b>Инженер</b><br>Расчет ракет</div>
             <div class="badge-item"><div class="b-icon">🪐</div><b>Штурман</b><br>Грави-маневр</div>
             <div class="badge-item"><div class="b-icon">🛬</div><b>Астронавт</b><br>Мягкая посадка</div>
         </div>
@@ -658,7 +659,10 @@
     };
     let activeZone = zones.valhalla;
 
+    // Глобальные переменные для астероидов и эффектов
     let asters = [], astProgress = 100, astHP = 100;
+    let lasers = [], particles = [], astFrameCount = 0;
+    
     let shipTargetX = 0;
     let landParams = { alt: 5000, vy: -35, vx: 0, px: 0, rot: 0, fuel: 100 };
     let ctrl = { u: false, l: false, r: false };
@@ -702,6 +706,16 @@
             const gain = audioCtx.createGain();
             osc.type = 'square'; osc.frequency.setValueAtTime(80 + Math.random()*40, now);
             gain.gain.setValueAtTime(0.15, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(now); osc.stop(now + 0.1);
+        } else if (type === 'laser') {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square'; 
+            osc.frequency.setValueAtTime(800, now); 
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+            gain.gain.setValueAtTime(0.1, now); 
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
             osc.connect(gain); gain.connect(audioCtx.destination);
             osc.start(now); osc.stop(now + 0.1);
         }
@@ -1069,8 +1083,12 @@
         document.getElementById('modal-zone').style.display = 'none';
     }
 
+    // НОВЫЕ ФУНКЦИИ ДЛЯ ЭТАПА С АСТЕРОИДАМИ
     function setupAsteroidStage() {
         scene.background = new THREE.Color(0x050510);
+        lasers = [];
+        particles = [];
+        astFrameCount = 0;
 
         const playerShip = new THREE.Group();
         const matBody = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.8 });
@@ -1093,11 +1111,12 @@
         stageObjs.astShip = playerShip;
 
         for (let i = 0; i < 25; i++) {
-            const rockGeo = new THREE.DodecahedronGeometry(Math.random() * 0.8 + 0.3);
-            const rockMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 1 });
+            const rockGeo = new THREE.IcosahedronGeometry(Math.random() * 0.8 + 0.4, 0);
+            const rockMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 1, metalness: 0.2 });
             const rock = new THREE.Mesh(rockGeo, rockMat);
-            rock.position.set((Math.random() - 0.5) * 20, Math.random() * 20 + 10, (Math.random() - 0.5) * 4);
-            rock.velocity = new THREE.Vector3(0, -Math.random() * 0.15 - 0.1, 0);
+            rock.position.set((Math.random() - 0.5) * 20, Math.random() * 20 + 15, (Math.random() - 0.5) * 4);
+            rock.velocity = new THREE.Vector3(0, -Math.random() * 0.2 - 0.1, 0);
+            rock.isAsteroid = true;
             scene.add(rock); stageObjs.push(rock);
             asters.push(rock);
         }
@@ -1108,206 +1127,268 @@
         };
         document.addEventListener('pointermove', handleMove);
         document.addEventListener('touchmove', handleMove);
+        
         stageObjs.cleanupAst = () => {
             document.removeEventListener('pointermove', handleMove);
             document.removeEventListener('touchmove', handleMove);
+            lasers.forEach(l => scene.remove(l));
+            particles.forEach(p => scene.remove(p));
         };
+    }
+
+    function createExplosion(pos) {
+        const colors = [0xfca5a5, 0xfacc15, 0xffffff, 0x38bdf8];
+        for(let i = 0; i < 12; i++) {
+            const pGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            const pMat = new THREE.MeshBasicMaterial({ color: colors[Math.floor(Math.random()*colors.length)] });
+            const p = new THREE.Mesh(pGeo, pMat);
+            p.position.copy(pos);
+            p.velocity = new THREE.Vector3((Math.random()-0.5)*0.8, (Math.random()-0.5)*0.8, (Math.random()-0.5)*0.8);
+            p.life = 1.0;
+            scene.add(p);
+            particles.push(p);
+            stageObjs.push(p);
+        }
     }
 
     function updateAsteroids() {
         if (currentStage !== 5 || !stageObjs.astShip) return;
+        astFrameCount++;
 
-        stageObjs.astShip.position.x += (shipTargetX - stageObjs.astShip.position.x) * 0.1;
-        stageObjs.astShip.rotation.z = (stageObjs.astShip.position.x - shipTargetX) * 0.15;
+        // Движение и эффектный наклон корабля
+        stageObjs.astShip.position.x += (shipTargetX - stageObjs.astShip.position.x) * 0.15;
+        stageObjs.astShip.rotation.z = (stageObjs.astShip.position.x - shipTargetX) * 0.2;
+        stageObjs.astShip.rotation.y = (stageObjs.astShip.position.x - shipTargetX) * -0.15;
 
-        for (let r of asters) {
-            r.position.add(r.velocity);
-            r.rotation.x += 0.02; r.rotation.y += 0.03;
-            
-            if (r.position.distanceTo(stageObjs.astShip.position) < 1.2) {
-                playSound('boom'); astHP -= 20; r.position.y += 20;
-                document.getElementById('ast-hp').innerText = Math.max(0, astHP) + '%';
-            }
-            if (r.position.y < -10) {
-                r.position.y = 20;
-                r.position.x = stageObjs.astShip.position.x + (Math.random() - 0.5) * 12;
+        // Автострельба каждые 12 кадров
+        if (astFrameCount % 12 === 0) {
+            playSound('laser');
+            const laser = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.05, 0.05, 0.8, 8), 
+                new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+            );
+            laser.position.copy(stageObjs.astShip.position);
+            laser.position.y += 1.5;
+            scene.add(laser);
+            lasers.push(laser);
+            stageObjs.push(laser);
+        }
+
+        // Обновление лазеров
+        for (let i = lasers.length - 1; i >= 0; i--) {
+            let l = lasers[i];
+            l.position.y += 0.8;
+            if (l.position.y > 20) {
+                scene.remove(l);
+                lasers.splice(i, 1);
             }
         }
+
+        // Обновление частиц взрывов
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.position.add(p.velocity);
+            p.life -= 0.05;
+            p.scale.setScalar(p.life);
+            if (p.life <= 0) {
+                scene.remove(p);
+                particles.splice(i, 1);
+            }
+        }
+
+        // Обновление астероидов и столкновения
+        for (let r of asters) {
+            r.position.add(r.velocity);
+            r.rotation.x += 0.04; r.rotation.y += 0.05;
+            
+            // Проверка попадания лазера по астероиду
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                let l = lasers[i];
+                if (r.position.distanceTo(l.position) < 1.4) {
+                    playSound('boom');
+                    createExplosion(r.position);
+                    r.position.y = 20 + Math.random() * 5;
+                    r.position.x = stageObjs.astShip.position.x + (Math.random() - 0.5) * 16;
+                    scene.remove(l);
+                    lasers.splice(i, 1);
+                    break;
+                }
+            }
+
+            // Проверка столкновения корабля и астероида
+            if (r.position.distanceTo(stageObjs.astShip.position) < 1.2) {
+                playSound('boom'); 
+                astHP -= 20; 
+                createExplosion(stageObjs.astShip.position);
+                document.getElementById('ast-hp').innerText = Math.max(0, astHP) + '%';
+                
+                // Тряска камеры
+                camera.position.x += (Math.random() - 0.5) * 1.5;
+                camera.position.y += (Math.random() - 0.5) * 1.5;
+
+                r.position.y = 20 + Math.random() * 5;
+                r.position.x = stageObjs.astShip.position.x + (Math.random() - 0.5) * 16;
+            }
+
+            if (r.position.y < -10) {
+                r.position.y = 20 + Math.random() * 5;
+                r.position.x = stageObjs.astShip.position.x + (Math.random() - 0.5) * 16;
+            }
+        }
+
+        // Плавный возврат камеры на место
+        camera.position.lerp(new THREE.Vector3(0, -6, 8), 0.1);
 
         astProgress -= 0.15;
         document.getElementById('ast-dist').innerText = Math.max(0, Math.floor(astProgress)) + '%';
         
-        if (astProgress <= 0) {
+        if (astProgress <= 0 || astHP <= 0) {
             stageObjs.cleanupAst();
-            nextStage(6);
+            if (astHP <= 0) {
+                alert('КРИТИЧЕСКИЙ УРОН! Корабль разрушен астероидами. Миссия провалена.');
+                restartGame();
+            } else {
+                nextStage(6);
+            }
         }
     }
 
     function setupLandingStage() {
-        scene.background = new THREE.Color(0x020208);
-        
-        const padMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 1 });
-        const moonSurf = new THREE.Mesh(new THREE.PlaneGeometry(100, 100, 32, 32), padMat);
-        moonSurf.rotation.x = -Math.PI / 2;
-        moonSurf.position.set(0, -4, 0); 
-        scene.add(moonSurf); stageObjs.push(moonSurf);
+        scene.background = new THREE.Color(0x0a0f1e);
+        landParams = { alt: 5000, vy: -35, vx: (Math.random()-0.5)*10, px: 0, rot: 0, fuel: 100 };
 
-        const landerMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.6 });
-        const lander = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), landerMat);
-        
-        const legMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8 });
-        [-0.6, 0.6].forEach(x => [-0.6, 0.6].forEach(z => {
-            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.8), legMat);
-            leg.position.set(x, -0.6, z);
-            lander.add(leg);
-        }));
+        const ground = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 100, 32, 32),
+            new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 1 })
+        );
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -2;
+        scene.add(ground); stageObjs.push(ground);
 
-        const thrustMat = new THREE.MeshBasicMaterial({ color: 0xfca5a5, transparent: true, opacity: 0.8 });
-        const thruster = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.5, 16), thrustMat);
-        thruster.position.set(0, -1.2, 0);
-        thruster.rotation.x = Math.PI;
-        thruster.visible = false;
-        lander.add(thruster);
-        
-        lander.position.set(0, 10, 0);
+        const pad = new THREE.Mesh(new THREE.CircleGeometry(2, 32), new THREE.MeshBasicMaterial({ color: 0xa3e635 }));
+        pad.rotation.x = -Math.PI / 2; pad.position.y = -1.98;
+        scene.add(pad); stageObjs.push(pad);
+        stageObjs.pad = pad;
+
+        const lander = new THREE.Group();
+        lander.add(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1, 16), new THREE.MeshStandardMaterial({ color: 0xf8fafc })));
+        lander.add(new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.4, 16), new THREE.MeshStandardMaterial({ color: 0x38bdf8 })).translateY(0.7));
+        lander.position.set(landParams.px, 15, 0);
         scene.add(lander); stageObjs.push(lander);
         stageObjs.lander = lander;
-        stageObjs.thruster = thruster;
+
+        const ex = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1, 8), new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.8 }));
+        ex.position.y = -0.8; ex.rotation.x = Math.PI;
+        ex.visible = false;
+        lander.add(ex);
+        stageObjs.exhaust = ex;
+
+        camera.position.set(0, 2, 20);
+        camera.lookAt(0, 5, 0);
     }
 
-    function updateLandingStage(dt) {
+    function updateLandingStage() {
         if (currentStage !== 6 || !stageObjs.lander) return;
 
-        const g = 1.23; 
-        const thrustPow = 4.0;
-        const rcsPow = 1.0;
-
-        if (ctrl.u && landParams.fuel > 0) { 
-            landParams.vy += thrustPow * dt; 
-            landParams.fuel -= 15 * dt; 
-            stageObjs.thruster.visible = true;
-            if(Math.random()>0.7) playSound('thruster');
-        } else {
-            stageObjs.thruster.visible = false;
+        if (landParams.fuel > 0) {
+            if (ctrl.u) { landParams.vy += 0.15; landParams.fuel -= 0.1; playSound('thruster'); }
+            if (ctrl.l) { landParams.vx -= 0.05; landParams.fuel -= 0.02; landParams.rot -= 0.02; }
+            if (ctrl.r) { landParams.vx += 0.05; landParams.fuel -= 0.02; landParams.rot += 0.02; }
         }
-        
-        if (ctrl.l && landParams.fuel > 0) { landParams.vx -= rcsPow * dt; landParams.fuel -= 5 * dt; }
-        if (ctrl.r && landParams.fuel > 0) { landParams.vx += rcsPow * dt; landParams.fuel -= 5 * dt; }
 
-        landParams.vy -= g * dt;
-        landParams.alt += landParams.vy * dt * 20;
-        landParams.px += landParams.vx * dt * 2;
-        landParams.rot -= landParams.vx * dt * 0.1;
+        stageObjs.exhaust.visible = ctrl.u && landParams.fuel > 0;
+        stageObjs.exhaust.scale.y = 0.5 + Math.random()*0.5;
+
+        landParams.vy -= 0.05; // Гравитация
+        landParams.alt += landParams.vy;
+        landParams.px += landParams.vx;
+        landParams.rot *= 0.98;
+
+        stageObjs.lander.position.y = Math.max(-1.5, landParams.alt / 250);
+        stageObjs.lander.position.x = landParams.px / 10;
+        stageObjs.lander.rotation.z = -landParams.rot;
 
         document.getElementById('l-alt').innerText = Math.max(0, Math.floor(landParams.alt));
         document.getElementById('l-vy').innerText = Math.floor(landParams.vy);
+        document.getElementById('l-vy').style.color = Math.abs(landParams.vy) > 10 ? '#f87171' : '#a3e635';
         document.getElementById('l-vx').innerText = Math.floor(landParams.vx);
         document.getElementById('l-fuel').innerText = Math.max(0, Math.floor(landParams.fuel)) + '%';
 
-        stageObjs.lander.position.y = -2.5 + (landParams.alt / 5000) * 11;
-        stageObjs.lander.position.x = landParams.px;
-        stageObjs.lander.rotation.z = landParams.rot;
-
         if (landParams.alt <= 0) {
-            landParams.alt = 0;
-            const success = Math.abs(landParams.vy) < 15 && Math.abs(landParams.vx) < 5 && Math.abs(landParams.rot) < 0.2;
+            ctrl = { u:false, l:false, r:false };
+            stageObjs.exhaust.visible = false;
+            let success = Math.abs(landParams.vy) <= 15 && Math.abs(landParams.vx) <= 5 && Math.abs(stageObjs.lander.position.x) < 2;
+            
             if (success) {
                 playSound('success');
-                confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
-                setTimeout(() => nextStage(7), 2500);
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                setTimeout(() => nextStage(7), 2000);
             } else {
                 playSound('boom');
-                alert(`АВАРИЯ! Слишком высокая скорость посадки (${Math.floor(landParams.vy)} м/с). Повторите попытку!`);
+                alert("КРУШЕНИЕ! Скорость или отклонение превысили норму.");
                 restartGame();
             }
         }
     }
 
     window.nextStage = function(s) {
-        playSound('click');
         clearStage();
         currentStage = s;
-        
-        document.getElementById('stage-title').innerText = 
-            s===1 ? "КОНСТРУКТОР" : s===2 ? "РАСЧЕТ РАКЕТЫ" : s===3 ? "НАВИГАЦИЯ" : 
-            s===4 ? "КАРТОГРАФИЯ" : s===5 ? "ПРОЛЕТ АСТЕРОИДОВ" : s===6 ? "ПОСАДКА" : "ИТОГИ МИССИИ";
-        
-        const uiMap = { 1: 'stage1', 2: 'stage2', 3: 'stage3', 4: 'stage4', 5: 'stage5', 6: 'stage6', 7: 'stage7' };
-        if(uiMap[s]) document.getElementById(uiMap[s]).style.display = (s===5 || s===6) ? 'flex' : 'block';
+        document.getElementById('stage' + s).style.display = (s===5 || s===6) ? 'flex' : 'block';
 
-        if (s === 1) { 
-            camera.position.set(0, 0, 7); 
-            camera.lookAt(new THREE.Vector3(0, 0, 0));
-            updateShipVisual(); 
-        }
-        if (s === 2) {
-            mathStep = 1;
-            const currentRocket = rocketTypes[activeRocket];
-            document.getElementById('math-mpn-val').innerText = probeMass;
-            document.getElementById('math-mult').innerText = currentRocket.mult;
-            document.getElementById('formula-text').innerText = `m_2 = ${probeMass} × ${currentRocket.mult} = ??? кг`;
-            document.getElementById('math-mass-input').value = '';
-            document.getElementById('math-err').style.display = 'none';
-            document.getElementById('math-step-title').innerText = "ШАГ 1: РАСЧЕТ ВТОРОЙ СТУПЕНИ";
+        if (s === 1) {
+            document.getElementById('stage-title').innerText = "1. ЦЕХ СБОРКИ";
+            camera.position.set(0, 0, 7); camera.lookAt(0,0,0);
+            updateShipVisual();
+        } else if (s === 2) {
+            document.getElementById('stage-title').innerText = "2. РАСЧЕТ РАКЕТЫ";
+            camera.position.set(0, 0, 10);
+            const m1 = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 4, 16), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            scene.add(m1); stageObjs.push(m1);
+        } else if (s === 3) {
+            document.getElementById('stage-title').innerText = "3. НАВИГАЦИЯ";
+            camera.position.set(0, 15, 12); camera.lookAt(0,0,0);
+            drawSolarSystem(); updateTrajectoryVisual();
+        } else if (s === 4) {
+            document.getElementById('stage-title').innerText = "4. ОРБИТА КАЛЛИСТО";
+            camera.position.set(0, 0, 12);
+            setupMappingStage();
+        } else if (s === 5) {
+            document.getElementById('stage-title').innerText = "5. ПОЯС АСТЕРОИДОВ";
+            document.getElementById('modal-zone').style.display = 'none';
+            astProgress = 100; astHP = 100; asters = [];
+            camera.position.set(0, -6, 8); camera.lookAt(0,0,0);
+            setupAsteroidStage();
+        } else if (s === 6) {
+            document.getElementById('stage-title').innerText = "6. ПОСАДКА";
+            setupLandingStage();
+        } else if (s === 7) {
+            document.getElementById('stage-title').innerText = "УСПЕХ МИССИИ!";
+            document.getElementById('cert-ship-name').innerText = `ФЛОТИЛИЯ (${probeMass} кг)`;
+            document.getElementById('cert-sci').innerText = Math.floor(probeSci * activeZone.mult);
             camera.position.set(0, 0, 5);
-            camera.lookAt(new THREE.Vector3(0, 0, 0));
-        }
-        if (s === 3) { 
-            camera.position.set(0, 15, 20); 
-            camera.lookAt(new THREE.Vector3(0, 0, 0)); 
-            drawSolarSystem(); 
-            updateTrajectoryVisual(); 
-        }
-        if (s === 4) { 
-            camera.position.set(0, 0, 15); 
-            camera.lookAt(new THREE.Vector3(0, 0, 0));
-            setupMappingStage(); 
-        }
-        if (s === 5) { 
-            camera.position.set(0, -6, 8); 
-            camera.lookAt(new THREE.Vector3(0, 0, 0)); 
-            setupAsteroidStage(); 
-            astProgress = 100; 
-            astHP = 100; 
-            asters = []; 
-        }
-        if (s === 6) { 
-            camera.position.set(0, 0, 12); 
-            camera.lookAt(new THREE.Vector3(0, 0, 0)); 
-            landParams = { alt: 5000, vy: -35, vx: 0, px: 0, rot: 0, fuel: 100 }; 
-            setupLandingStage(); 
-        }
-        if (s === 7) { 
-            let finalSci = Math.floor(probeSci * activeZone.mult);
-            document.getElementById('cert-sci').innerText = finalSci; 
-            document.getElementById('cert-ship-name').innerText = "ИССЛЕДОВАТЕЛЬСКАЯ ФЛОТИЛИЯ";
-            camera.position.set(0, 0, 5);
-            camera.lookAt(new THREE.Vector3(0, 0, 0));
         }
     };
 
     window.restartGame = function() {
-        playSound('click');
-        activeShips = { light: true, medium: false, heavy: false };
-        activeRocket = 'light';
-        equipment.forEach(e => e.sel = false);
-        mathStep = 1;
-        document.getElementById('math-mass-input').value = '';
-        renderEquip(); updateMass();
+        mathStep = 1; m1Sel = 0; m2Sel = 0;
         nextStage(1);
-    }
+    };
 
     function animate() {
         requestAnimationFrame(animate);
-        const dt = clock.getDelta();
-
+        
         if (currentStage === 1 && stageObjs.shipMesh) stageObjs.shipMesh.rotation.y += 0.005;
-        if (currentStage === 4) {
-            if (controls) controls.update();
-            updateMapMarkers();
-        }
+        if (currentStage === 4 && controls) { controls.update(); updateMapMarkers(); }
         if (currentStage === 5) updateAsteroids();
-        if (currentStage === 6) updateLandingStage(dt);
+        if (currentStage === 6) updateLandingStage();
+        if (currentStage === 7) {
+            if(!stageObjs.c) {
+                stageObjs.c = new THREE.Mesh(new THREE.TorusKnotGeometry(1, 0.3, 100, 16), new THREE.MeshStandardMaterial({color:0xfacc15, metalness:1}));
+                scene.add(stageObjs.c); stageObjs.push(stageObjs.c);
+            }
+            stageObjs.c.rotation.x += 0.01; stageObjs.c.rotation.y += 0.02;
+        }
 
         renderer.render(scene, camera);
     }
